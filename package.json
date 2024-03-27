@@ -1,0 +1,14 @@
+{
+  "name": "find-unused-packages",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "glob": "^10.3.10"
+  }
+}
