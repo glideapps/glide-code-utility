@@ -39,4 +39,20 @@ const unusedDependencies = dependencies.filter(
     (dep) => !usedDependencies.has(dep)
 );
 
-console.log("Unused Dependencies:", unusedDependencies);
+if (unusedDependencies.length > 0) {
+    console.log("Removing Unused Dependencies:", unusedDependencies);
+
+    // Remove unused dependencies from packageJson object
+    unusedDependencies.forEach((dep) => {
+        delete packageJson.dependencies[dep];
+    });
+
+    // Write the updated packageJson back to package.json
+    fs.writeFileSync(
+        packageJsonPath,
+        JSON.stringify(packageJson, null, 4) + "\n"
+    );
+    console.log("package.json has been updated.");
+} else {
+    console.log("No unused dependencies found.");
+}
