@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { findUnusedPackages } from "./find-unused-packages";
+import { moveFilePackage } from "./move-file-package";
 
 const program = new Command();
 
@@ -12,4 +13,13 @@ program
         await findUnusedPackages(dir ?? process.cwd(), options.remove);
     });
 
-program.parse(process.argv);
+program
+    .command("move-file-package")
+    .argument("<source-file>", "Path to the file to move")
+    .argument("<target-directory>", "Path to the directory to move the file to")
+    .description("Move a file to a package directory and update its exports")
+    .action(async (sourceFilePath, targetDirPath) => {
+        await moveFilePackage(sourceFilePath, targetDirPath);
+    });
+
+await program.parseAsync(process.argv);
