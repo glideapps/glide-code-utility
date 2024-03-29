@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { findUnusedPackages } from "./find-unused-packages";
 import { moveFilePackage } from "./move-file-package";
+import { barrelExport } from "./barrel-export";
 
 const program = new Command();
 
@@ -20,6 +21,15 @@ program
     .description("Move a file to a package directory and update its exports")
     .action(async (sourceFilePath, targetDirPath) => {
         await moveFilePackage(sourceFilePath, targetDirPath);
+    });
+
+program
+    .command("barrel-export")
+    .argument("<package-dir>", "Path to the package directory")
+    .argument("<source-paths...>", "Paths to directories to search for exports")
+    .description("Generate a barrel export for a package")
+    .action(async (packageDir, directoryPaths) => {
+        await barrelExport(packageDir, directoryPaths);
     });
 
 await program.parseAsync(process.argv);

@@ -9,6 +9,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@glideapps/ts-necessities": "^2.1.3",
     "commander": "^12.0.0",
     "glob": "^10.3.10"
   }

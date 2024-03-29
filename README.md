@@ -17,6 +17,7 @@ Options:
 Commands:
   find-unused-packages [options] [directory]          Find unused packages in a project directory
   move-file-package <source-file> <target-directory>  Move a file to a package directory and update its exports
+  barrel-export <package-dir> <source-paths...>       Generate a barrel export for a package
   help [command]                                      display help for command
 ```
 
@@ -35,3 +36,9 @@ one, leaving behind a file that just re-exports what the original file
 exported. It also adds a package dependency to the original package.
 
 https://www.loom.com/share/65c5428c4ebe4ea591e6eec258f35c60
+
+## barrel-export
+
+Generates barrel exports for symbols that are imported from other packages.
+
+https://www.loom.com/share/af5a9c666e5e441c893fee95e8cff07f
