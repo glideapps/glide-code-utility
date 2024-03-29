@@ -2,6 +2,8 @@ import { Command } from "commander";
 import { findUnusedPackages } from "./find-unused-packages";
 import { moveFilePackage } from "./move-file-package";
 import { barrelExport } from "./barrel-export";
+import { test } from "./test";
+import { rewriteImports } from "./rewrite-imports";
 
 const program = new Command();
 
@@ -10,8 +12,8 @@ program
     .description("Find unused packages in a project directory")
     .argument("[directory]", "Directory that has the package.json file")
     .option("-r, --remove", "Remove unused packages from package.json")
-    .action(async (dir, options) => {
-        await findUnusedPackages(dir ?? process.cwd(), options.remove);
+    .action((dir, options) => {
+        findUnusedPackages(dir ?? process.cwd(), options.remove);
     });
 
 program
@@ -29,7 +31,18 @@ program
     .argument("<source-paths...>", "Paths to directories to search for exports")
     .description("Generate a barrel export for a package")
     .action(async (packageDir, directoryPaths) => {
-        await barrelExport(packageDir, directoryPaths);
+        barrelExport(packageDir, directoryPaths);
+    });
+
+program
+    .command("rewrite-imports")
+    .argument("<name>", "Name of the imported symbol")
+    .argument("<from-path>", "Import path to rewrite")
+    .argument("<to-path>", "New import path")
+    .argument("<source-paths...>", "Paths to directories to search for imports")
+    .description("Rewrite import paths in a project")
+    .action(async (name, fromPath, toPath, sourcePaths) => {
+        rewriteImports(name, fromPath, toPath, sourcePaths);
     });
 
 await program.parseAsync(process.argv);

@@ -15,10 +15,12 @@ Options:
   -h, --help                                          display help for command
 
 Commands:
-  find-unused-packages [options] [directory]          Find unused packages in a project directory
-  move-file-package <source-file> <target-directory>  Move a file to a package directory and update its exports
-  barrel-export <package-dir> <source-paths...>       Generate a barrel export for a package
-  help [command]                                      display help for command
+  find-unused-packages [options] [directory]                      Find unused packages in a project directory
+  move-file-package <source-file> <target-directory>              Move a file to a package directory and update its
+                                                                  exports
+  barrel-export <package-dir> <source-paths...>                   Generate a barrel export for a package
+  rewrite-imports <name> <from-path> <to-path> <source-paths...>  Rewrite import paths in a project
+  help [command]                                                  display help for command
 ```
 
 ## find-unused-packages
@@ -42,3 +44,9 @@ https://www.loom.com/share/65c5428c4ebe4ea591e6eec258f35c60
 Generates barrel exports for symbols that are imported from other packages.
 
 https://www.loom.com/share/af5a9c666e5e441c893fee95e8cff07f
+
+## rewrite-imports
+
+Changes the path from which a symbol is imported.
+
+https://www.loom.com/share/36cf0c84e1814517bbcb3cc8c1dded0f

@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { glob } from "glob";
 
-export async function findUnusedPackages(dir: string, remove: boolean) {
+export function findUnusedPackages(dir: string, remove: boolean) {
     const packageJsonPath = path.join(dir, "package.json");
 
     if (!fs.existsSync(packageJsonPath)) {

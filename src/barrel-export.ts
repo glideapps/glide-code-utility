@@ -1,7 +1,7 @@
 import { DefaultMap, assert } from "@glideapps/ts-necessities";
 import fs from "fs";
 import path from "path";
-import { escapeStringAsRegexp } from "./support";
+import { escapeStringAsRegexp, isTSFile, walkDirectory } from "./support";
 
 interface Entries {
     readonly full: Set<string>;
@@ -18,11 +18,7 @@ function addFull(entries: Entries, name: string) {
     entries.full.add(name);
 }
 
-function isTsFile(file: string) {
-    return file.endsWith(".ts") || file.endsWith(".tsx");
-}
-
-export async function barrelExport(
+export function barrelExport(
     packageDir: string,
     directoryPaths: readonly string[]
 ) {
@@ -41,53 +37,42 @@ export async function barrelExport(
         types: new Set(),
     }));
 
-    const readFiles = (dir: string) => {
-        fs.readdirSync(dir).forEach((file) => {
-            const filePath = path.join(dir, file);
-            const stat = fs.statSync(filePath);
+    for (const path of directoryPaths) {
+        walkDirectory(path, (filePath) => {
+            if (!isTSFile(filePath)) return;
 
-            if (stat.isDirectory()) {
-                readFiles(filePath);
-            } else if (isTsFile(file)) {
-                const content = fs.readFileSync(filePath, "utf8");
-                const importRegex = new RegExp(
-                    `import(\\s+type)?\\s+({([^}]*?)}|[a-zA-Z_$][a-zA-Z\\d_$]*)\\s+from "${packageNameRegex}\\/dist\\/js\\/([^";]+)";`,
-                    "g"
-                );
+            const content = fs.readFileSync(filePath, "utf8");
+            const importRegex = new RegExp(
+                `import(\\s+type)?\\s+({([^}]*?)}|[a-zA-Z_$][a-zA-Z\\d_$]*)\\s+from "${packageNameRegex}\\/dist\\/js\\/([^";]+)";`,
+                "g"
+            );
 
-                let match;
-                while ((match = importRegex.exec(content)) !== null) {
-                    const maybeType = match[1] ?? "";
-                    const symbolsString = match[2]
-                        .replace(/[\n\r]+/g, " ")
-                        .trim();
-                    const path = match[4];
+            let match;
+            while ((match = importRegex.exec(content)) !== null) {
+                const maybeType = match[1] ?? "";
+                const symbolsString = match[2].replace(/[\n\r]+/g, " ").trim();
+                const path = match[4];
 
-                    let symbols: string[];
-                    if (symbolsString.startsWith("{")) {
-                        assert(symbolsString.endsWith("}"));
-                        symbols = symbolsString
-                            .substring(1, symbolsString.length - 1)
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter((s) => s.length > 0);
-                    } else {
-                        symbols = [`default as ${symbolsString}`];
-                    }
+                let symbols: string[];
+                if (symbolsString.startsWith("{")) {
+                    assert(symbolsString.endsWith("}"));
+                    symbols = symbolsString
+                        .substring(1, symbolsString.length - 1)
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter((s) => s.length > 0);
+                } else {
+                    symbols = [`default as ${symbolsString}`];
+                }
 
-                    const entries = exportStatements.get(path);
-                    if (maybeType.length > 0) {
-                        symbols.forEach((s) => addType(entries, s));
-                    } else {
-                        symbols.forEach((s) => addFull(entries, s));
-                    }
+                const entries = exportStatements.get(path);
+                if (maybeType.length > 0) {
+                    symbols.forEach((s) => addType(entries, s));
+                } else {
+                    symbols.forEach((s) => addFull(entries, s));
                 }
             }
         });
-    };
-
-    for (const path of directoryPaths) {
-        readFiles(path);
     }
 
     const lines: string[] = [];
