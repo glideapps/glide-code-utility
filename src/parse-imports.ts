@@ -1,13 +1,15 @@
 import { separateStringByMatches } from "./support";
 
 export interface Import {
-    readonly type: boolean;
-    readonly names: readonly string[];
+    readonly kind: "import" | "export";
+    readonly isType: boolean;
+    // `true` means a wildcard import
+    readonly names: readonly string[] | true;
     readonly path: string;
 }
 
 const importRegexp =
-    /import(\s+type)?\s+({([^}]*?)}|[a-zA-Z_$][a-zA-Z\d_$]*)\s+from "([^";]+)";/g;
+    /(import|export)(\s+type)?\s+(\*|{([^}]*?)}|[a-zA-Z_$][a-zA-Z\d_$]*)\s+from "([^";]+)";/g;
 
 export function parseImports(code: string): readonly (string | Import)[] {
     const parsedParts = separateStringByMatches(importRegexp, code);
@@ -17,10 +19,17 @@ export function parseImports(code: string): readonly (string | Import)[] {
         if (typeof p === "string") {
             parts.push(p);
         } else {
-            if (p[3]) {
-                const type = p[1] !== undefined;
-                const names = p[3].split(",").map((n) => n.trim());
-                parts.push({ type, names, path: p[4] });
+            const kind = p[1] as "import" | "export";
+            const type = p[2] !== undefined;
+            const path = p[5];
+            if (p[3] === "*") {
+                parts.push({ kind, isType: type, names: true, path });
+            } else if (p[4]) {
+                const names = p[4]
+                    .split(",")
+                    .map((n) => n.trim())
+                    .filter((n) => n.length > 0);
+                parts.push({ kind, isType: type, names, path });
             } else {
                 parts.push(p[0]);
             }
@@ -36,9 +45,13 @@ export function unparseImports(parts: readonly (string | Import)[]): string {
             if (typeof p === "string") {
                 return p;
             } else {
-                const type = p.type ? "type " : "";
-                const names = p.names.join(", ");
-                return `import ${type}{ ${names} } from "${p.path}";`;
+                const type = p.isType ? "type " : "";
+                if (p.names === true) {
+                    return `${p.kind} ${type}* from "${p.path}";`;
+                } else {
+                    const names = p.names.join(", ");
+                    return `${p.kind} ${type}{ ${names} } from "${p.path}";`;
+                }
             }
         })
         .join("");

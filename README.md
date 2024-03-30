@@ -41,9 +41,10 @@ https://www.loom.com/share/65c5428c4ebe4ea591e6eec258f35c60
 
 ## barrel-export
 
-Generates barrel exports for symbols that are imported from other packages.
+Generates barrel exports for symbols that are imported from other packages and
+updates those to barrel-imports.
 
-https://www.loom.com/share/af5a9c666e5e441c893fee95e8cff07f
+https://www.loom.com/share/95d7b9c4f20940c6b4d9db7f8808b710
 
 ## rewrite-imports
 

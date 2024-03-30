@@ -38,20 +38,20 @@ export function separateStringByMatches(
     return parts;
 }
 
-export function walkDirectory(
+export async function walkDirectory(
     dir: string,
-    processFile: (path: string) => void
-): void {
-    fs.readdirSync(dir).forEach((file) => {
+    processFile: (path: string) => Promise<void>
+): Promise<void> {
+    for (const file of fs.readdirSync(dir)) {
         const filePath = path.join(dir, file);
         const stat = fs.statSync(filePath);
 
         if (stat.isDirectory()) {
-            walkDirectory(filePath, processFile);
+            await walkDirectory(filePath, processFile);
         } else {
-            processFile(filePath);
+            await processFile(filePath);
         }
-    });
+    }
 }
 
 export function isTSFile(filename: string) {

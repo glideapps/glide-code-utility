@@ -31,7 +31,7 @@ program
     .argument("<source-paths...>", "Paths to directories to search for exports")
     .description("Generate a barrel export for a package")
     .action(async (packageDir, directoryPaths) => {
-        barrelExport(packageDir, directoryPaths);
+        await barrelExport(packageDir, directoryPaths);
     });
 
 program

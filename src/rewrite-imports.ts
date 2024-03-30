@@ -2,14 +2,14 @@ import fs from "fs";
 import { isTSFile, walkDirectory } from "./support";
 import { parseImports, type Import, unparseImports } from "./parse-imports";
 
-export function rewriteImports(
+export async function rewriteImports(
     name: string,
     fromPath: string,
     toPath: string,
     sourcePaths: readonly string[]
 ) {
     for (const sourcePath of sourcePaths) {
-        walkDirectory(sourcePath, (filePath) => {
+        await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
 
             const content = fs.readFileSync(filePath, "utf8");
@@ -20,7 +20,9 @@ export function rewriteImports(
             for (const part of parts) {
                 if (
                     typeof part === "string" ||
+                    part.kind !== "import" ||
                     part.path !== fromPath ||
+                    part.names === true ||
                     !part.names.includes(name)
                 ) {
                     resultParts.push(part);
@@ -33,7 +35,8 @@ export function rewriteImports(
                     resultParts.push("\n");
                 }
                 resultParts.push({
-                    type: part.type,
+                    kind: part.kind,
+                    isType: part.isType,
                     names: [name],
                     path: toPath,
                 });
