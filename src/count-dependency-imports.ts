@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { $, Glob } from "bun";
+import { parseImports } from "./parse-imports";
 
 export async function countDependencyImports(dir: string) {
   if (!dir) {
@@ -71,8 +72,14 @@ export async function countDependencyImports(dir: string) {
 
       const content = fs.readFileSync(path.join(actualDir, file), "utf8");
       let match;
-      while ((match = importExportRegex.exec(content)) !== null) {
-        const importPath = match[1];
+
+      const matches = parseImports(content);
+      for (const match of matches) {
+        if (typeof match === "string") {
+          continue;
+        }
+
+        const importPath = match.path;
         const matchedDependency = dependencies.find(
           (dep) => importPath === dep || importPath.startsWith(dep + "/")
         );
