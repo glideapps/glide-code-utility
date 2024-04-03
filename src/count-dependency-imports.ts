@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { glob } from "glob";
-import { $ } from "bun";
+import { $, Glob } from "bun";
 
 export async function countDependencyImports(dir: string) {
   if (!dir) {
@@ -25,7 +24,7 @@ export async function countDependencyImports(dir: string) {
 
   console.log(`Analyzing ${packageDeps.length} dependencies...`);
 
-  packageDeps.forEach((dep) => {
+  for (const dep of packageDeps) {
     const dependencies = deps.graph.dependencies[dep].map(
       (d: { target: string }) => d.target
     );
@@ -35,14 +34,14 @@ export async function countDependencyImports(dir: string) {
 
     if (dependencies.length === 0) {
       console.log("No dependencies, skipping.");
-      return;
+      continue;
     }
     // for each dependency in deps, count the number of times it is imported.
-    countDependencies(dep, dependencies);
+    await countDependencies(dep, dependencies);
     console.log("\n");
-  });
+  }
 
-  function countDependencies(pkg: string, dependencies: any[]) {
+  async function countDependencies(pkg: string, dependencies: any[]) {
     const packageDir = path.join(dir, "packages", pkg);
     let actualDir = packageDir.replace("@glide/", "");
 
@@ -54,7 +53,8 @@ export async function countDependencyImports(dir: string) {
       actualDir = path.join(dir, "functions");
     }
 
-    const tsFiles = glob.sync(path.join(actualDir, "**/*.ts*"));
+    const glob = new Glob("**/*.ts*");
+    const tsFiles = await Array.fromAsync(glob.scan(actualDir));
 
     // Use a Map to store and count dependencies
     const dependencyCounts = new Map();
@@ -63,13 +63,13 @@ export async function countDependencyImports(dir: string) {
     const importExportRegex = /from\s+['"](@?[^'"]+)['"]/g;
 
     tsFiles.forEach((file) => {
-      const stats = fs.statSync(file);
+      const stats = fs.statSync(path.join(actualDir, file));
       if (stats.isDirectory()) {
         // Handle the error as needed: throw an error, return a specific value, etc.
         throw new Error(`The path "${file}" is a directory, not a file.`);
       }
 
-      const content = fs.readFileSync(file, "utf8");
+      const content = fs.readFileSync(path.join(actualDir, file), "utf8");
       let match;
       while ((match = importExportRegex.exec(content)) !== null) {
         const importPath = match[1];
