@@ -26,6 +26,8 @@ Commands:
                                                                   dependencies could be moved.
   dedup-imports <source-paths...>                                 Rewrites multiple imports of the same package to a
                                                                   single import
+  verbatim-imports <source-paths...>                              Rewrites imports to use the verbatim import syntax
+                                                                  with explicit extensions
   help [command]                                                  display help for command
 ```
 
@@ -62,3 +64,9 @@ https://www.loom.com/share/36cf0c84e1814517bbcb3cc8c1dded0f
 
 Fixes duplicate imports by combining them into single import statements.  This
 PR was made with it: https://github.com/glideapps/glide/pull/26508
+
+## verbatim-imports
+
+This converts imports so that they're compatible with the
+`verbatimModuleSyntax` option.  This PR was made with it:
+https://github.com/glideapps/glide/pull/27568

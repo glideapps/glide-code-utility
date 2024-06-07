@@ -5,6 +5,7 @@ import { barrelExport } from "./barrel-export";
 import { countDependencyImports } from "./count-dependency-imports";
 import { rewriteImports } from "./rewrite-imports";
 import { dedupImports } from "./dedup-imports";
+import { verbatimImports } from "./verbatim-imports";
 
 const program = new Command();
 
@@ -67,6 +68,19 @@ program
     )
     .action(async (sourcePaths) => {
         dedupImports(sourcePaths);
+    });
+
+program
+    .command("verbatim-imports")
+    .argument(
+        "<source-paths...>",
+        "Paths to directories with source files to process"
+    )
+    .description(
+        "Rewrites imports to use the verbatim import syntax with explicit extensions"
+    )
+    .action(async (sourcePaths) => {
+        verbatimImports(sourcePaths);
     });
 
 await program.parseAsync(process.argv);
