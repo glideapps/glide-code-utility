@@ -1,7 +1,11 @@
 import { $ } from "bun";
 import * as fs from "fs";
 import path from "path";
-import { parseImports, unparseImports, type Import } from "./parse-imports";
+import {
+    readFileAndParseImports,
+    unparseImports,
+    type Import,
+} from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
 import { DefaultMap } from "@glideapps/ts-necessities";
 
@@ -12,7 +16,7 @@ export async function dedupImports(
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
 
-            const parts = parseImports(fs.readFileSync(filePath, "utf-8"));
+            const parts = readFileAndParseImports(filePath);
 
             const nonTypeNames = new DefaultMap<string, string[]>(() => []);
             const typeNames = new DefaultMap<string, string[]>(() => []);

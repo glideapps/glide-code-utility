@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { parseImports, unparseImports } from "./parse-imports";
+import { readFileAndParseImports, unparseImports } from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
 
 export async function verbatimImports(
@@ -9,7 +9,7 @@ export async function verbatimImports(
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
 
-            let parts = parseImports(fs.readFileSync(filePath, "utf-8"));
+            let parts = readFileAndParseImports(filePath);
 
             parts = parts.map((p) => {
                 if (typeof p === "string") return p;

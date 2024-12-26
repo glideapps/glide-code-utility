@@ -3,7 +3,11 @@ import { DefaultMap } from "@glideapps/ts-necessities";
 import fs from "fs";
 import path from "path";
 import { isTSFile, walkDirectory } from "./support";
-import { parseImports, type Import, unparseImports } from "./parse-imports";
+import {
+    type Import,
+    unparseImports,
+    readFileAndParseImports,
+} from "./parse-imports";
 
 interface Entries {
     full: Set<string> | true;
@@ -52,8 +56,7 @@ export async function barrelExport(
         await walkDirectory(directoryPath, async (filePath) => {
             if (!isTSFile(filePath)) return;
 
-            const content = fs.readFileSync(filePath, "utf8");
-            const parsedParts = parseImports(content);
+            const parsedParts = readFileAndParseImports(filePath);
 
             let didChange = false;
             let newParts: (string | Import)[] = [];
@@ -105,8 +108,7 @@ export async function barrelExport(
     const existingExports = new Map<string, Entries>();
 
     if (fs.existsSync(outputFilePath)) {
-        const content = fs.readFileSync(outputFilePath, "utf8");
-        const parts = parseImports(content);
+        const parts = readFileAndParseImports(outputFilePath);
 
         for (const part of parts) {
             if (typeof part === "string" || part.kind !== "export") continue;

@@ -1,6 +1,10 @@
 import fs from "fs";
 import { isTSFile, walkDirectory } from "./support";
-import { parseImports, type Import, unparseImports } from "./parse-imports";
+import {
+    type Import,
+    unparseImports,
+    readFileAndParseImports,
+} from "./parse-imports";
 
 export async function rewriteImports(
     name: string,
@@ -12,8 +16,7 @@ export async function rewriteImports(
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
 
-            const content = fs.readFileSync(filePath, "utf8");
-            const parts = parseImports(content);
+            const parts = readFileAndParseImports(filePath);
 
             let didRewrite = false;
             const resultParts: (string | Import)[] = [];

@@ -1,3 +1,4 @@
+import fs from "fs";
 import { separateStringByMatches } from "./support";
 
 export interface Import {
@@ -37,6 +38,13 @@ export function parseImports(code: string): readonly (string | Import)[] {
     }
 
     return parts;
+}
+
+export function readFileAndParseImports(
+    filePath: string
+): readonly (string | Import)[] {
+    const content = fs.readFileSync(filePath, "utf8");
+    return parseImports(content);
 }
 
 export function unparseImports(parts: readonly (string | Import)[]): string {
