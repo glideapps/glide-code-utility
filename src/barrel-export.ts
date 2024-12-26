@@ -4,9 +4,9 @@ import fs from "fs";
 import path from "path";
 import { isTSFile, walkDirectory } from "./support";
 import {
-    type Import,
     unparseImports,
     readFileAndParseImports,
+    type Part,
 } from "./parse-imports";
 
 interface Entries {
@@ -59,7 +59,7 @@ export async function barrelExport(
             const parsedParts = readFileAndParseImports(filePath);
 
             let didChange = false;
-            let newParts: (string | Import)[] = [];
+            let newParts: Part[] = [];
             for (const part of parsedParts) {
                 if (
                     typeof part === "string" ||

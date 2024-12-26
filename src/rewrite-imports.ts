@@ -1,9 +1,9 @@
 import fs from "fs";
 import { isTSFile, walkDirectory } from "./support";
 import {
-    type Import,
     unparseImports,
     readFileAndParseImports,
+    type Part,
 } from "./parse-imports";
 
 export async function rewriteImports(
@@ -19,7 +19,7 @@ export async function rewriteImports(
             const parts = readFileAndParseImports(filePath);
 
             let didRewrite = false;
-            const resultParts: (string | Import)[] = [];
+            const resultParts: Part[] = [];
             for (const part of parts) {
                 if (
                     typeof part === "string" ||

@@ -9,12 +9,15 @@ export interface Import {
     readonly path: string;
 }
 
+export type Part = string | Import;
+type Parts = readonly Part[];
+
 const importRegexp =
     /(import|export)(\s+type)?\s+(\*|{([^}]*?)}|[a-zA-Z_$][a-zA-Z\d_$]*)\s+from "([^";]+)";/g;
 
-export function parseImports(code: string): readonly (string | Import)[] {
+export function parseImports(code: string): Parts {
     const parsedParts = separateStringByMatches(importRegexp, code);
-    const parts: (string | Import)[] = [];
+    const parts: Part[] = [];
 
     for (const p of parsedParts) {
         if (typeof p === "string") {
@@ -40,14 +43,12 @@ export function parseImports(code: string): readonly (string | Import)[] {
     return parts;
 }
 
-export function readFileAndParseImports(
-    filePath: string
-): readonly (string | Import)[] {
+export function readFileAndParseImports(filePath: string): Parts {
     const content = fs.readFileSync(filePath, "utf8");
     return parseImports(content);
 }
 
-export function unparseImports(parts: readonly (string | Import)[]): string {
+export function unparseImports(parts: Parts): string {
     return parts
         .map((p) => {
             if (typeof p === "string") {
