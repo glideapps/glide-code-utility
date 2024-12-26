@@ -1,4 +1,6 @@
+import { $ } from "bun";
 import fs from "fs";
+import path from "path";
 import { separateStringByMatches } from "./support";
 
 export interface Import {
@@ -79,10 +81,15 @@ export function unparseImports(parts: Parts): string {
         .join("");
 }
 
-export function unparseImportsAndWriteFile(
+export async function unparseImportsAndWriteFile(
     parts: Parts,
-    filePath: string
-): void {
+    filePath: string,
+    prettier: boolean
+): Promise<void> {
     const content = unparseImports(parts);
     fs.writeFileSync(filePath, content, "utf8");
+    if (prettier) {
+        const { dir, base } = path.parse(filePath);
+        await $`npx prettier --write ${base}`.cwd(dir);
+    }
 }

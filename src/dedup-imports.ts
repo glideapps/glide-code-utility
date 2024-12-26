@@ -86,9 +86,7 @@ export async function dedupImports(
             }
 
             console.log("writing", filePath);
-            unparseImportsAndWriteFile(finished, filePath);
-            const { dir, base } = path.parse(filePath);
-            await $`npx prettier --write ${base}`.cwd(dir);
+            await unparseImportsAndWriteFile(finished, filePath, true);
         });
     }
 }

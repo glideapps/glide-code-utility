@@ -46,7 +46,7 @@ export async function rewriteImports(
             }
 
             if (didRewrite) {
-                unparseImportsAndWriteFile(resultParts, filePath);
+                await unparseImportsAndWriteFile(resultParts, filePath, false);
                 console.log("Rewrote imports in", filePath);
             }
         });

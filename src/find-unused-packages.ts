@@ -21,6 +21,9 @@ export function findUnusedPackages(dir: string, remove: boolean) {
     const importExportRegex = /from\s+['"](@?[^'"]+)['"]/g;
 
     tsFiles.forEach((file) => {
+        const stats = fs.statSync(file);
+        if (stats.isDirectory()) return;
+
         const content = fs.readFileSync(file, "utf8");
         let match;
         while ((match = importExportRegex.exec(content)) !== null) {

@@ -6,6 +6,9 @@ import { countDependencyImports } from "./count-dependency-imports";
 import { rewriteImports } from "./rewrite-imports";
 import { dedupImports } from "./dedup-imports";
 import { verbatimImports } from "./verbatim-imports";
+import { resolveImportsInDirectories } from "./resolve-imports";
+import { countImports } from "./count-imports";
+import { removeReExports } from "./remove-re-exports";
 
 const program = new Command();
 
@@ -81,6 +84,40 @@ program
     )
     .action(async (sourcePaths) => {
         verbatimImports(sourcePaths);
+    });
+
+program
+    .command("resolve-imports")
+    .argument("<packages-path>", "Path to the packages directory")
+    .argument(
+        "<source-paths...>",
+        "Paths to directories with source files to process"
+    )
+    .description("FIXME: write")
+    .action(async (packagesPath, sourceFilePaths) => {
+        resolveImportsInDirectories(packagesPath, sourceFilePaths);
+    });
+
+program
+    .command("count-imports")
+    .argument(
+        "<source-paths...>",
+        "Paths to directories with source files to process"
+    )
+    .description("FIXME: write")
+    .action(async (sourceFilePaths) => {
+        countImports(sourceFilePaths);
+    });
+
+program
+    .command("remove-re-exports")
+    .argument(
+        "<source-paths...>",
+        "Paths to directories with source files to process"
+    )
+    .description("FIXME: write")
+    .action(async (sourceFilePaths) => {
+        removeReExports(sourceFilePaths);
     });
 
 await program.parseAsync(process.argv);

@@ -21,7 +21,7 @@ export async function verbatimImports(
             });
 
             console.log("writing", filePath);
-            unparseImportsAndWriteFile(parts, filePath);
+            await unparseImportsAndWriteFile(parts, filePath, false);
         });
     }
 }

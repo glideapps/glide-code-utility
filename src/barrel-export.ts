@@ -92,11 +92,8 @@ export async function barrelExport(
             }
 
             if (didChange) {
-                unparseImportsAndWriteFile(newParts, filePath);
-                console.log(`Imports written to ${filePath}`);
-                // get path and filename of `filePath`
-                const { dir, base } = path.parse(filePath);
-                await $`npx prettier --write ${base}`.cwd(dir);
+                console.log(`Writing imports to ${filePath}`);
+                await unparseImportsAndWriteFile(newParts, filePath, true);
             }
         });
     }
