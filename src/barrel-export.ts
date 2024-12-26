@@ -4,9 +4,9 @@ import fs from "fs";
 import path from "path";
 import { isTSFile, walkDirectory } from "./support";
 import {
-    unparseImports,
     readFileAndParseImports,
     type Part,
+    unparseImportsAndWriteFile,
 } from "./parse-imports";
 
 interface Entries {
@@ -92,8 +92,7 @@ export async function barrelExport(
             }
 
             if (didChange) {
-                const newContent = unparseImports(newParts);
-                fs.writeFileSync(filePath, newContent);
+                unparseImportsAndWriteFile(newParts, filePath);
                 console.log(`Imports written to ${filePath}`);
                 // get path and filename of `filePath`
                 const { dir, base } = path.parse(filePath);

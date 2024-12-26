@@ -65,3 +65,11 @@ export function unparseImports(parts: Parts): string {
         })
         .join("");
 }
+
+export function unparseImportsAndWriteFile(
+    parts: Parts,
+    filePath: string
+): void {
+    const content = unparseImports(parts);
+    fs.writeFileSync(filePath, content, "utf8");
+}

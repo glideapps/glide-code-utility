@@ -1,5 +1,7 @@
-import * as fs from "fs";
-import { readFileAndParseImports, unparseImports } from "./parse-imports";
+import {
+    readFileAndParseImports,
+    unparseImportsAndWriteFile,
+} from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
 
 export async function verbatimImports(
@@ -19,7 +21,7 @@ export async function verbatimImports(
             });
 
             console.log("writing", filePath);
-            fs.writeFileSync(filePath, unparseImports(parts), "utf-8");
+            unparseImportsAndWriteFile(parts, filePath);
         });
     }
 }

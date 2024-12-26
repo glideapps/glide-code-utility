@@ -1,9 +1,8 @@
 import { $ } from "bun";
-import * as fs from "fs";
 import path from "path";
 import {
     readFileAndParseImports,
-    unparseImports,
+    unparseImportsAndWriteFile,
     type Import,
 } from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
@@ -87,7 +86,7 @@ export async function dedupImports(
             }
 
             console.log("writing", filePath);
-            fs.writeFileSync(filePath, unparseImports(finished), "utf-8");
+            unparseImportsAndWriteFile(finished, filePath);
             const { dir, base } = path.parse(filePath);
             await $`npx prettier --write ${base}`.cwd(dir);
         });

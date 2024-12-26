@@ -1,9 +1,8 @@
-import fs from "fs";
 import { isTSFile, walkDirectory } from "./support";
 import {
-    unparseImports,
     readFileAndParseImports,
     type Part,
+    unparseImportsAndWriteFile,
 } from "./parse-imports";
 
 export async function rewriteImports(
@@ -47,7 +46,7 @@ export async function rewriteImports(
             }
 
             if (didRewrite) {
-                fs.writeFileSync(filePath, unparseImports(resultParts), "utf8");
+                unparseImportsAndWriteFile(resultParts, filePath);
                 console.log("Rewrote imports in", filePath);
             }
         });

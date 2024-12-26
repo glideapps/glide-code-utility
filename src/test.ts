@@ -3,7 +3,7 @@ import { parseImports, unparseImports } from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
 
 export function test(path: string) {
-    walkDirectory(path, (filePath) => {
+    walkDirectory(path, async (filePath) => {
         if (!isTSFile(filePath)) return;
 
         const content = fs.readFileSync(filePath, "utf8");
