@@ -38,7 +38,7 @@ function nodeText(code: string, node: SyntaxNode) {
     return code.slice(node.startIndex, node.endIndex);
 }
 
-// Recursively gather all import/export nodes in a DFS
+// Recursively gather import/export nodes
 function gatherImportExportNodes(node: SyntaxNode, results: SyntaxNode[]) {
     if (
         node.type === "import_statement" ||
@@ -54,152 +54,191 @@ function gatherImportExportNodes(node: SyntaxNode, results: SyntaxNode[]) {
     }
 }
 
+// Find a direct child of the given node with one of the specified `types`
+function findChildByType(
+    node: SyntaxNode,
+    acceptedTypes: string[]
+): SyntaxNode | undefined {
+    for (let i = 0; i < node.childCount; i++) {
+        const child = node.child(i);
+        if (child && acceptedTypes.includes(child.type)) {
+            return child;
+        }
+    }
+    return undefined;
+}
+
+// Parse an import_statement or export_statement
 function parseImportOrExport(code: string, node: SyntaxNode): Import | null {
     const kind =
         node.type === "import_statement"
             ? "import"
-            : node.type.startsWith("export")
+            : node.type === "export_statement"
             ? "export"
             : null;
     if (!kind) return null;
 
-    // Try to find the "import_clause" or "export_clause" node to get names,
-    // plus the string literal (path).
-    const clauseNode =
-        node.childForFieldName("import_clause") || // for imports
-        node.childForFieldName("export_clause"); // for exports
+    // Find the string literal with the module path
+    const sourceNode = findChildByType(node, ["string"]);
+    if (!sourceNode) {
+        // e.g. "export {foo}" without "from"
+        return null;
+    }
+    const path = nodeText(code, sourceNode).replace(/^["']|["']$/g, "");
 
-    // Some exports (e.g. `export * from "foo"`) have no "export_clause", so we
-    // look for the star node or named exports in them. This is a simplified approach.
-    const fromNode = node.childForFieldName("source"); // usually a string literal
-    if (!fromNode) return null;
+    // Tree-sitter generally puts the import/export details in a child called "import_clause" or "export_clause",
+    // but `childForFieldName` might not work if the grammar doesn't define them as named fields.
+    // So we search for them by type. Typically it's "import_clause" or "export_clause".
+    const clauseNode = findChildByType(node, [
+        "import_clause",
+        "export_clause",
+    ]);
 
-    const path = nodeText(code, fromNode).replace(/^["']|["']$/g, "");
+    // We'll collect the names from the clause
     const names: ImportName[] = [];
 
-    // Attempt to detect "type" prefix inside the clause.
-    // For more sophisticated handling, you'd walk children carefully.
-    let typePrefix = false;
-    if (clauseNode && clauseNode.text.startsWith("type")) {
-        typePrefix = true;
-    }
-
-    // Collect each import/export name
-    if (clauseNode) {
-        // Clause might contain named imports, wildcard, or default.
-        // We walk the children to see what they are.
+    if (!clauseNode) {
+        // Maybe `export * from "foo"` or `import "foo"` (side-effect only)
+        let foundStar = false;
+        for (let i = 0; i < node.childCount; i++) {
+            const c = node.child(i);
+            if (c && c.type === "*") {
+                foundStar = true;
+                break;
+            }
+        }
+        if (foundStar) {
+            names.push({ isType: false, name: true, as: undefined });
+        }
+    } else {
+        // clauseNode might contain multiple children (default import, named imports, namespace imports, etc.)
         for (let i = 0; i < clauseNode.childCount; i++) {
             const child = clauseNode.child(i);
             if (!child) continue;
 
-            // Identify wildcard import: import * as foo from 'x'
-            if (child.type === "namespace_import") {
-                const asNode = child.childForFieldName("name");
-                names.push({
-                    isType: typePrefix,
-                    name: true, // wildcard
-                    as: asNode ? nodeText(code, asNode) : undefined,
-                });
-            }
-            // Identify named imports: import { foo as bar, baz } from 'x'
-            else if (
-                child.type === "named_imports" ||
-                child.type === "named_exports"
-            ) {
-                for (let j = 0; j < child.namedChildCount; j++) {
-                    const specifier = child.namedChild(j);
-                    if (!specifier) continue;
-                    // foo as bar
-                    const nameNode = specifier.childForFieldName("name");
-                    const aliasNode = specifier.childForFieldName("alias");
+            switch (child.type) {
+                // Default import => `import Foo from "foo"`
+                // or `export default Foo` (though that's slightly different in TS)
+                case "identifier": {
                     names.push({
-                        isType: typePrefix,
-                        name: nameNode ? nodeText(code, nameNode) : "",
-                        as: aliasNode ? nodeText(code, aliasNode) : undefined,
+                        isType: false,
+                        name: nodeText(code, child),
+                        as: undefined,
                     });
+                    break;
                 }
-            }
-            // Default import or export default
-            // e.g. import Foo from 'x'
-            else if (
-                child.type === "import_specifier" ||
-                child.type === "identifier"
-            ) {
-                names.push({
-                    isType: typePrefix,
-                    name: nodeText(code, child),
-                    as: undefined,
-                });
-            }
-        }
-    } else {
-        // Possibly `export * from "x"`
-        // If the node has a '*' child, treat it as wildcard
-        for (let i = 0; i < node.childCount; i++) {
-            const child = node.child(i);
-            if (child && child.type === "*") {
-                names.push({
-                    isType: false, // "export *" doesn't specify type
-                    name: true,
-                    as: undefined,
-                });
+                // e.g. `import { Foo, Bar as Baz } from "something"`
+                //      `export { X, Y as Z } from "whatever"`
+                case "named_imports":
+                case "named_exports": {
+                    for (let j = 0; j < child.namedChildCount; j++) {
+                        const spec = child.namedChild(j);
+                        // Typically "import_specifier" or "export_specifier"
+                        if (
+                            spec &&
+                            (spec.type === "import_specifier" ||
+                                spec.type === "export_specifier")
+                        ) {
+                            const nameNode = findChildByType(spec, [
+                                "identifier",
+                            ]);
+                            const aliasNode = findChildByType(spec, [
+                                "identifier",
+                            ]); // or see if there's a field for alias
+                            // In many grammars, the name is the first child, the alias is the second (if there's an `as`)
+                            // But let's do a more direct approach:
+                            const realName = spec.childForFieldName("name"); // often doesn't work if no named field
+                            const realAlias = spec.childForFieldName("alias"); // often doesn't work either
+                            // fallback to manual child scanning:
+                            // spec might look like: (import_specifier name: (identifier) alias: (identifier))
+                            // We'll map them carefully:
+                            let importName: string | undefined;
+                            let aliasName: string | undefined;
+
+                            // We'll check children in order:
+                            if (spec.childCount === 1) {
+                                // just { Foo }
+                                importName = nodeText(code, spec.child(0)!);
+                            } else if (spec.childCount === 3) {
+                                // something like { Foo as Bar }
+                                // typically child(1) is "as"
+                                importName = nodeText(code, spec.child(0)!);
+                                aliasName = nodeText(code, spec.child(2)!);
+                            } else {
+                                // fallback
+                                importName = nameNode
+                                    ? nodeText(code, nameNode)
+                                    : "";
+                                aliasName =
+                                    aliasNode && aliasNode !== nameNode
+                                        ? nodeText(code, aliasNode)
+                                        : undefined;
+                            }
+
+                            if (importName) {
+                                names.push({
+                                    isType: false,
+                                    name: importName,
+                                    as: aliasName,
+                                });
+                            }
+                        }
+                    }
+                    break;
+                }
+                // e.g. `import * as Foo from "bar"`
+                case "namespace_import": {
+                    // might have a child named "Foo"
+                    const asNode = findChildByType(child, ["identifier"]);
+                    names.push({
+                        isType: false,
+                        name: true,
+                        as: asNode ? nodeText(code, asNode) : undefined,
+                    });
+                    break;
+                }
+                default:
+                    // For other child types, we skip or parse as needed
+                    break;
             }
         }
     }
 
-    // If no names found, fallback to a wildcard guess or skip
-    if (names.length === 0) {
-        // Maybe `import "some-side-effect"`
-        // We'll skip these or handle them as empty
-        return {
-            kind,
-            names: [],
-            path,
-        };
-    }
-
-    return {
-        kind,
-        names,
-        path,
-    };
+    return { kind, names, path };
 }
 
-// A basic approach for creating a Part[]: we take the entire code and slice
-// around import/export nodes. Everything in-between is just a string Part,
-// and each import/export node yields an Import Part.
+// We'll produce Part[] by slicing the source code around each import/export node
 export function parseImports(code: string): Part[] {
     const parser = new Parser();
     parser.setLanguage(TypeScript.typescript);
 
     const tree = parser.parse(code);
+
+    // Gather import/export statements
     const imexNodes: SyntaxNode[] = [];
     gatherImportExportNodes(tree.rootNode, imexNodes);
-
-    // Sort them by their location in the file
     imexNodes.sort((a, b) => a.startIndex - b.startIndex);
 
     const parts: Part[] = [];
     let currentIndex = 0;
 
     for (const node of imexNodes) {
-        // Everything between currentIndex and node.startIndex is non-import code
+        // Grab the code before this statement
         if (node.startIndex > currentIndex) {
             parts.push(code.slice(currentIndex, node.startIndex));
         }
-
-        const imex = parseImportOrExport(code, node);
-        if (imex) {
-            parts.push(imex);
+        // Parse
+        const parsed = parseImportOrExport(code, node);
+        if (parsed) {
+            parts.push(parsed);
         } else {
-            // If for some reason we couldn't parse, just keep the raw code
+            // fallback
             parts.push(code.slice(node.startIndex, node.endIndex));
         }
-
         currentIndex = node.endIndex;
     }
 
-    // Trailing code after the last import/export
+    // The remainder after the last import/export
     if (currentIndex < code.length) {
         parts.push(code.slice(currentIndex));
     }
