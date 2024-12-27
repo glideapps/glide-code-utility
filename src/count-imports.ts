@@ -23,11 +23,7 @@ export async function countImports(
 
             const parts = readFileAndParseImports(filePath);
             for (const part of parts) {
-                if (
-                    typeof part === "string" ||
-                    part.names === true ||
-                    part.kind !== "import"
-                ) {
+                if (typeof part === "string" || part.kind !== "import") {
                     continue;
                 }
 
@@ -35,10 +31,11 @@ export async function countImports(
                 if (glideImport === undefined) continue;
 
                 for (const name of part.names) {
+                    if (name.name === true) continue;
                     counts
                         .get(sourcePath)
                         .get(glideImport.packageName)
-                        .update(name, (n) => n + 1);
+                        .update(name.name, (n) => n + 1);
                 }
             }
         });

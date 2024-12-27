@@ -20,6 +20,7 @@ export async function removeReExports(
                 if (typeof p === "string") return true;
                 return p.kind !== "export";
             });
+            if (resultParts.length === parts.length) return;
 
             console.log("writing", filePath);
             await unparseImportsAndWriteFile(resultParts, filePath, false);

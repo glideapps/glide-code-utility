@@ -2,13 +2,32 @@ import { $ } from "bun";
 import fs from "fs";
 import path from "path";
 import { separateStringByMatches } from "./support";
+import { assert } from "@glideapps/ts-necessities";
+
+export interface ImportName {
+    readonly isType: boolean;
+    // `true` means a wildcard import
+    readonly name: string | true;
+    readonly as: string | undefined;
+}
 
 export interface Import {
     readonly kind: "import" | "export";
-    readonly isType: boolean;
-    // `true` means a wildcard import
-    readonly names: readonly string[] | true;
+    readonly names: readonly ImportName[];
     readonly path: string;
+}
+
+export function getWildcardImport(p: Import): ImportName | undefined {
+    const n = p.names.find((n) => n.name === true);
+    if (n === undefined) return undefined;
+    assert(p.names.length === 1);
+    return n;
+}
+
+export function isTypeImport(p: Import): boolean {
+    const isType = p.names.some((n) => n.isType);
+    assert(p.names.every((n) => n.isType === isType));
+    return isType;
 }
 
 export type Part = string | Import;
@@ -41,13 +60,25 @@ export function parseImports(code: string): Parts {
                 const type = p[2] !== undefined;
                 const path = p[5];
                 if (p[3] === "*") {
-                    parts.push({ kind, isType: type, names: true, path });
+                    parts.push({
+                        kind,
+                        names: [{ isType: type, name: true, as: undefined }],
+                        path,
+                    });
                 } else if (p[4]) {
                     const names = p[4]
                         .split(",")
                         .map((n) => n.trim())
                         .filter((n) => n.length > 0);
-                    parts.push({ kind, isType: type, names, path });
+                    parts.push({
+                        kind,
+                        names: names.map((n) => ({
+                            isType: type,
+                            name: n,
+                            as: undefined,
+                        })),
+                        path,
+                    });
                 } else {
                     parts.push(p[0]);
                 }
@@ -69,11 +100,28 @@ export function unparseImports(parts: Parts): string {
             if (typeof p === "string") {
                 return p;
             } else {
-                const type = p.isType ? "type " : "";
-                if (p.names === true) {
+                assert(p.names.length > 0);
+                const isType = p.names.some((n) => n.isType);
+                assert(p.names.every((n) => n.isType === isType));
+
+                const isWildcard = p.names.some((n) => n.name === true);
+                if (isWildcard) {
+                    assert(p.names.length === 1);
+                }
+
+                const type = isType ? "type " : "";
+                if (isWildcard) {
                     return `${p.kind} ${type}* from "${p.path}";`;
                 } else {
-                    const names = p.names.join(", ");
+                    const names = p.names
+                        .map((n) => {
+                            if (n.as !== undefined) {
+                                return `${n.name} as ${n.as}`;
+                            } else {
+                                return n.name;
+                            }
+                        })
+                        .join(", ");
                     return `${p.kind} ${type}{ ${names} } from "${p.path}";`;
                 }
             }

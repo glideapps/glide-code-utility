@@ -1,6 +1,6 @@
-import { $ } from "bun";
-import path from "path";
 import {
+    getWildcardImport,
+    isTypeImport,
     readFileAndParseImports,
     unparseImportsAndWriteFile,
     type Import,
@@ -17,6 +17,7 @@ export async function dedupImports(
 
             const parts = readFileAndParseImports(filePath);
 
+            // import path -> [names]
             const nonTypeNames = new DefaultMap<string, string[]>(() => []);
             const typeNames = new DefaultMap<string, string[]>(() => []);
 
@@ -25,15 +26,17 @@ export async function dedupImports(
             for (const p of parts) {
                 if (typeof p === "string") continue;
                 if (p.kind !== "import") continue;
-                if (p.names === true) continue;
 
-                const map = p.isType ? typeNames : nonTypeNames;
+                for (const name of p.names) {
+                    if (name.name === true) continue;
 
-                const existing = map.get(p.path);
-                if (existing.length > 0) {
-                    haveChanges = true;
+                    const map = name.isType ? typeNames : nonTypeNames;
+                    const existing = map.get(p.path);
+                    if (existing.length > 0) {
+                        haveChanges = true;
+                    }
+                    existing.push(name.name);
                 }
-                existing.push(...p.names);
             }
 
             if (!haveChanges) {
@@ -41,13 +44,15 @@ export async function dedupImports(
                 return;
             }
 
+            // import paths already imported from
             const nonTypesDone = new Set<string>();
             const typesDone = new Set<string>();
 
             function shouldDrop(i: Import) {
                 if (i.kind !== "import") return false;
-                if (i.names === true) return false;
-                const set = i.isType ? typesDone : nonTypesDone;
+                if (getWildcardImport(i) !== undefined) return false;
+                const isType = isTypeImport(i);
+                const set = isType ? typesDone : nonTypesDone;
                 return set.has(i.path);
             }
 
@@ -59,12 +64,24 @@ export async function dedupImports(
 
                 if (typeof first !== "string") {
                     if (shouldDrop(first)) continue;
+                    if (first.kind !== "import") {
+                        finished.push(first);
+                        continue;
+                    }
 
-                    const allForPath = (
-                        first.isType ? typeNames : nonTypeNames
-                    ).get(first.path);
-                    finished.push({ ...first, names: allForPath });
-                    (first.isType ? typesDone : nonTypesDone).add(first.path);
+                    const isType = isTypeImport(first);
+                    const allForPath = (isType ? typeNames : nonTypeNames).get(
+                        first.path
+                    );
+                    finished.push({
+                        ...first,
+                        names: allForPath.map((n) => ({
+                            isType,
+                            name: n,
+                            as: undefined,
+                        })),
+                    });
+                    (isType ? typesDone : nonTypesDone).add(first.path);
                 } else {
                     const second = left[0];
                     if (

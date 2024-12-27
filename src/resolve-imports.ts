@@ -3,9 +3,12 @@ import path from "path";
 import { assert } from "@glideapps/ts-necessities";
 import { isTSFile, walkDirectory } from "./support";
 import {
+    getWildcardImport,
+    isTypeImport,
     readFileAndParseImports,
     unparseImportsAndWriteFile,
     type Import,
+    type ImportName,
     type Part,
 } from "./parse-imports";
 import { parseGlideImportPath } from "./glide";
@@ -44,6 +47,9 @@ function findTSFile(filePath: string) {
     const jsFilename = filePath + ".js";
     if (fs.existsSync(jsFilename)) return undefined;
 
+    const indexDTSFilename = path.join(filePath, "index.d.ts");
+    if (fs.existsSync(indexDTSFilename)) return undefined;
+
     console.error("Not found:", filePath);
     process.exit(1);
 }
@@ -68,17 +74,30 @@ async function resolveImports(packageDir: string, filePath: string) {
             debugger;
         }
 
-        const visitedPaths = new Set<string>();
         let currentFilePath = filePath;
+        // If this is set, it's either a path to an NPM package, or the
+        // absolute path to a TypeScript file.
         let lastSuccessfulPath: string | undefined;
 
         function resolveLastSucessfulPath() {
+            const stripSuffixes = [/(^|\/)index\.tsx?$/, /\.tsx?$/];
+
             if (lastSuccessfulPath === undefined) return undefined;
             if (!lastSuccessfulPath.startsWith("/")) return lastSuccessfulPath;
-            const relative = path.relative(
+
+            let relative = path.relative(
                 path.parse(filePath).dir,
                 lastSuccessfulPath
             );
+
+            for (const suffix of stripSuffixes) {
+                const match = relative.match(suffix);
+                if (match !== null) {
+                    relative = relative.substring(0, match.index);
+                    break;
+                }
+            }
+
             if (relative.startsWith(".")) {
                 return relative;
             } else if (relative === "") {
@@ -89,29 +108,17 @@ async function resolveImports(packageDir: string, filePath: string) {
         }
 
         again: for (;;) {
-            if (visitedPaths.has(importedFromPath)) {
-                console.error(
-                    `Recursive import of ${name}: ${JSON.stringify(
-                        Array.from(visitedPaths)
-                    )}`
-                );
-                process.exit(1);
-            }
-            visitedPaths.add(importedFromPath);
-
             let nextFilePath: string | undefined;
 
             if (importedFromPath.startsWith(".")) {
                 const { dir } = path.parse(currentFilePath);
                 nextFilePath = findTSFile(path.join(dir, importedFromPath));
 
-                if (lastSuccessfulPath === undefined) {
-                    lastSuccessfulPath = path.resolve(dir, importedFromPath);
-                } else if (lastSuccessfulPath.startsWith("/")) {
-                    lastSuccessfulPath = path.resolve(
-                        lastSuccessfulPath,
-                        importedFromPath
-                    );
+                if (
+                    lastSuccessfulPath === undefined ||
+                    lastSuccessfulPath.startsWith("/")
+                ) {
+                    lastSuccessfulPath = nextFilePath;
                 }
             } else {
                 const glideImportPath = parseGlideImportPath(importedFromPath);
@@ -123,15 +130,15 @@ async function resolveImports(packageDir: string, filePath: string) {
 
                 lastSuccessfulPath = importedFromPath;
             }
-            assert(lastSuccessfulPath !== undefined);
             if (nextFilePath === undefined) return resolveLastSucessfulPath();
 
             const parts = readFileAndParseImports(nextFilePath);
             for (const part of parts) {
                 if (typeof part === "string") continue;
-                if (part.names === true) continue;
+                // FIXME: handle wildcard imports by recursing
+                if (getWildcardImport(part) !== undefined) continue;
 
-                if (part.names.includes(name)) {
+                if (part.names.some((n) => n.name === name)) {
                     importedFromPath = part.path;
                     currentFilePath = nextFilePath;
                     continue again;
@@ -150,15 +157,16 @@ async function resolveImports(packageDir: string, filePath: string) {
     const resultParts: Part[] = [];
 
     for (const part of parts) {
-        if (typeof part === "string" || part.names === true) {
+        if (typeof part === "string" || getWildcardImport(part) !== undefined) {
             resultParts.push(part);
             continue;
         }
 
-        const namesToKeep: string[] = [];
-        const newImports: (Import & { names: string[] })[] = [];
+        const namesToKeep: ImportName[] = [];
+        const newImports: (Import & { names: ImportName[] })[] = [];
         for (const name of part.names) {
-            const resolved = resolveImport(name, part.path);
+            assert(name.name !== true);
+            const resolved = resolveImport(name.name, part.path);
             if (
                 resolved === undefined ||
                 resolved === part.path ||
@@ -169,7 +177,7 @@ async function resolveImports(packageDir: string, filePath: string) {
             }
 
             // console.log(`${name}: ${part.path} -> ${resolved}`);
-            let newImport: (Import & { names: string[] }) | undefined;
+            let newImport: (Import & { names: ImportName[] }) | undefined;
             for (const i of newImports) {
                 if (i.path === resolved) {
                     newImport = i;
@@ -179,13 +187,11 @@ async function resolveImports(packageDir: string, filePath: string) {
             if (newImport === undefined) {
                 newImport = {
                     kind: part.kind,
-                    isType: part.isType,
                     names: [],
                     path: resolved,
                 };
                 newImports.push(newImport);
             }
-            assert(newImport.names !== true);
             newImport.names.push(name);
 
             didRewrite = true;

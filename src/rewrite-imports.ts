@@ -3,6 +3,8 @@ import {
     readFileAndParseImports,
     type Part,
     unparseImportsAndWriteFile,
+    getWildcardImport,
+    isTypeImport,
 } from "./parse-imports";
 
 export async function rewriteImports(
@@ -24,22 +26,23 @@ export async function rewriteImports(
                     typeof part === "string" ||
                     part.kind !== "import" ||
                     part.path !== fromPath ||
-                    part.names === true ||
-                    !part.names.includes(name)
+                    getWildcardImport(part) !== undefined ||
+                    !part.names.some((n) => n.name === name)
                 ) {
                     resultParts.push(part);
                     continue;
                 }
 
-                const rest = part.names.filter((n) => n !== name);
+                const rest = part.names.filter((n) => n.name !== name);
                 if (rest.length > 0) {
                     resultParts.push({ ...part, names: rest });
                     resultParts.push("\n");
                 }
                 resultParts.push({
                     kind: part.kind,
-                    isType: part.isType,
-                    names: [name],
+                    names: [
+                        { isType: isTypeImport(part), name, as: undefined },
+                    ],
                     path: toPath,
                 });
                 didRewrite = true;

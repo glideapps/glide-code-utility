@@ -1,5 +1,5 @@
 import { $ } from "bun";
-import { DefaultMap } from "@glideapps/ts-necessities";
+import { assert, DefaultMap } from "@glideapps/ts-necessities";
 import fs from "fs";
 import path from "path";
 import { isTSFile, walkDirectory } from "./support";
@@ -7,6 +7,7 @@ import {
     readFileAndParseImports,
     type Part,
     unparseImportsAndWriteFile,
+    getWildcardImport,
 } from "./parse-imports";
 
 interface Entries {
@@ -70,7 +71,8 @@ export async function barrelExport(
                     continue;
                 }
 
-                if (part.names === true) {
+                const wildcard = getWildcardImport(part);
+                if (wildcard !== undefined) {
                     console.error(
                         "Wildcard imports are not supported",
                         filePath
@@ -81,10 +83,13 @@ export async function barrelExport(
                 const partPath = part.path.substring(importPrefix.length);
 
                 const entries = exportStatements.get(partPath);
-                if (part.isType) {
-                    part.names.forEach((name) => addType(entries, name));
-                } else {
-                    part.names.forEach((name) => addFull(entries, name));
+                for (const name of part.names) {
+                    assert(name.name !== true);
+                    if (name.isType) {
+                        addType(entries, name.name);
+                    } else {
+                        addFull(entries, name.name);
+                    }
                 }
 
                 newParts.push({ ...part, path: packageName });
@@ -117,23 +122,23 @@ export async function barrelExport(
                 types: new Set(),
             };
 
-            if (part.names === true) {
-                if (part.isType) {
+            const wildcard = getWildcardImport(part);
+            if (wildcard !== undefined) {
+                if (wildcard.isType) {
                     entries.types = true;
                 } else {
                     entries.full = true;
                 }
             } else {
-                if (part.isType) {
-                    if (entries.types !== true) {
-                        for (const n of part.names) {
-                            entries.types.add(n);
+                for (const name of part.names) {
+                    assert(name.name !== true);
+                    if (name.isType) {
+                        if (entries.types !== true) {
+                            entries.types.add(name.name);
                         }
-                    }
-                } else {
-                    if (entries.full !== true) {
-                        for (const n of part.names) {
-                            entries.full.add(n);
+                    } else {
+                        if (entries.full !== true) {
+                            entries.full.add(name.name);
                         }
                     }
                 }
