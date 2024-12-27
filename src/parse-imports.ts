@@ -1,7 +1,7 @@
 import { $ } from "bun";
 import fs from "fs";
 import path from "path";
-import { assert } from "@glideapps/ts-necessities";
+import { assert, panic } from "@glideapps/ts-necessities";
 import Parser, { type SyntaxNode } from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 
@@ -70,6 +70,8 @@ function findChildByType(
 
 // Parse an import_statement or export_statement
 function parseImportOrExport(code: string, node: SyntaxNode): Import | null {
+    debugger;
+
     const kind =
         node.type === "import_statement"
             ? "import"
@@ -80,19 +82,17 @@ function parseImportOrExport(code: string, node: SyntaxNode): Import | null {
 
     // Find the string literal with the module path
     const sourceNode = findChildByType(node, ["string"]);
-    if (!sourceNode) {
-        // e.g. "export {foo}" without "from"
-        return null;
-    }
+    assert(sourceNode !== undefined);
     const path = nodeText(code, sourceNode).replace(/^["']|["']$/g, "");
+
+    const typeNode = findChildByType(node, ["type"]);
+    const globalIsType = typeNode !== undefined;
 
     // Tree-sitter generally puts the import/export details in a child called "import_clause" or "export_clause",
     // but `childForFieldName` might not work if the grammar doesn't define them as named fields.
     // So we search for them by type. Typically it's "import_clause" or "export_clause".
-    const clauseNode = findChildByType(node, [
-        "import_clause",
-        "export_clause",
-    ]);
+    const clauseNode =
+        findChildByType(node, ["import_clause", "export_clause"]) ?? undefined;
 
     // We'll collect the names from the clause
     const names: ImportName[] = [];
@@ -121,9 +121,9 @@ function parseImportOrExport(code: string, node: SyntaxNode): Import | null {
                 // or `export default Foo` (though that's slightly different in TS)
                 case "identifier": {
                     names.push({
-                        isType: false,
-                        name: nodeText(code, child),
-                        as: undefined,
+                        isType: globalIsType,
+                        name: true,
+                        as: nodeText(code, child),
                     });
                     break;
                 }
@@ -139,49 +139,34 @@ function parseImportOrExport(code: string, node: SyntaxNode): Import | null {
                             (spec.type === "import_specifier" ||
                                 spec.type === "export_specifier")
                         ) {
-                            const nameNode = findChildByType(spec, [
-                                "identifier",
-                            ]);
-                            const aliasNode = findChildByType(spec, [
-                                "identifier",
-                            ]); // or see if there's a field for alias
-                            // In many grammars, the name is the first child, the alias is the second (if there's an `as`)
-                            // But let's do a more direct approach:
-                            const realName = spec.childForFieldName("name"); // often doesn't work if no named field
-                            const realAlias = spec.childForFieldName("alias"); // often doesn't work either
-                            // fallback to manual child scanning:
-                            // spec might look like: (import_specifier name: (identifier) alias: (identifier))
-                            // We'll map them carefully:
-                            let importName: string | undefined;
-                            let aliasName: string | undefined;
-
-                            // We'll check children in order:
-                            if (spec.childCount === 1) {
-                                // just { Foo }
-                                importName = nodeText(code, spec.child(0)!);
-                            } else if (spec.childCount === 3) {
-                                // something like { Foo as Bar }
-                                // typically child(1) is "as"
-                                importName = nodeText(code, spec.child(0)!);
-                                aliasName = nodeText(code, spec.child(2)!);
-                            } else {
-                                // fallback
-                                importName = nameNode
-                                    ? nodeText(code, nameNode)
-                                    : "";
-                                aliasName =
-                                    aliasNode && aliasNode !== nameNode
-                                        ? nodeText(code, aliasNode)
-                                        : undefined;
+                            let i = 0;
+                            const isType = spec.child(i)?.text === "type";
+                            if (isType) i++;
+                            const nameNode = spec.child(i) ?? undefined;
+                            let aliasNode: SyntaxNode | undefined;
+                            assert(nameNode !== undefined);
+                            i++;
+                            if (spec.child(i)?.text === "as") {
+                                i++;
+                                aliasNode = spec.child(i) ?? undefined;
+                                assert(aliasNode !== undefined);
+                                i++;
                             }
+                            assert(i === spec.childCount);
 
-                            if (importName) {
-                                names.push({
-                                    isType: false,
-                                    name: importName,
-                                    as: aliasName,
-                                });
-                            }
+                            const importName = nameNode.text;
+                            const aliasName = aliasNode?.text;
+
+                            names.push({
+                                isType: isType || globalIsType,
+                                name: importName,
+                                as:
+                                    importName === aliasName
+                                        ? undefined
+                                        : aliasName,
+                            });
+                        } else {
+                            return panic("Unexpected import specifier");
                         }
                     }
                     break;
@@ -191,7 +176,7 @@ function parseImportOrExport(code: string, node: SyntaxNode): Import | null {
                     // might have a child named "Foo"
                     const asNode = findChildByType(child, ["identifier"]);
                     names.push({
-                        isType: false,
+                        isType: globalIsType,
                         name: true,
                         as: asNode ? nodeText(code, asNode) : undefined,
                     });
@@ -213,6 +198,8 @@ export function parseImports(code: string): Part[] {
     parser.setLanguage(TypeScript.typescript);
 
     const tree = parser.parse(code);
+
+    console.log(tree.rootNode.toString());
 
     // Gather import/export statements
     const imexNodes: SyntaxNode[] = [];
