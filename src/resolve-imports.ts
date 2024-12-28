@@ -4,7 +4,6 @@ import { assert } from "@glideapps/ts-necessities";
 import { isTSFile, walkDirectory } from "./support";
 import {
     getWildcardImport,
-    isTypeImport,
     readFileAndParseImports,
     unparseImportsAndWriteFile,
     type Import,
@@ -54,12 +53,14 @@ function findTSFile(filePath: string) {
     process.exit(1);
 }
 
-async function resolveImports(packageDir: string, filePath: string) {
-    function findImportedFile(
+class ImportResolver {
+    constructor(private readonly packageDir: string) {}
+
+    private findImportedFile(
         packageName: string,
         subpath: string | undefined
-    ) {
-        let filePath = path.join(packageDir, packageName, "src");
+    ): string | undefined {
+        let filePath = path.join(this.packageDir, packageName, "src");
         if (subpath !== undefined) {
             filePath = path.join(filePath, subpath);
         } else {
@@ -69,12 +70,12 @@ async function resolveImports(packageDir: string, filePath: string) {
         return findTSFile(filePath);
     }
 
-    function resolveImport(name: string, importedFromPath: string) {
-        if (name === "asString" && filePath.endsWith("primitives.ts")) {
-            debugger;
-        }
-
-        let currentFilePath = filePath;
+    public resolveImport(
+        sourceFilePath: string,
+        name: string,
+        importedFromPath: string
+    ): string | undefined {
+        let currentFilePath = sourceFilePath;
         // If this is set, it's either a path to an NPM package, or the
         // absolute path to a TypeScript file.
         let lastSuccessfulPath: string | undefined;
@@ -86,7 +87,7 @@ async function resolveImports(packageDir: string, filePath: string) {
             if (!lastSuccessfulPath.startsWith("/")) return lastSuccessfulPath;
 
             let relative = path.relative(
-                path.parse(filePath).dir,
+                path.parse(sourceFilePath).dir,
                 lastSuccessfulPath
             );
 
@@ -126,7 +127,7 @@ async function resolveImports(packageDir: string, filePath: string) {
                     return resolveLastSucessfulPath();
                 const { packageName, subpath } = glideImportPath;
 
-                nextFilePath = findImportedFile(packageName, subpath);
+                nextFilePath = this.findImportedFile(packageName, subpath);
 
                 lastSuccessfulPath = importedFromPath;
             }
@@ -148,7 +149,9 @@ async function resolveImports(packageDir: string, filePath: string) {
             return resolveLastSucessfulPath();
         }
     }
+}
 
+async function resolveImports(resolver: ImportResolver, filePath: string) {
     assert(isTSFile(filePath));
 
     const parts = readFileAndParseImports(filePath);
@@ -157,7 +160,7 @@ async function resolveImports(packageDir: string, filePath: string) {
     const resultParts: Part[] = [];
 
     for (const part of parts) {
-        if (typeof part === "string" || getWildcardImport(part) !== undefined) {
+        if (typeof part === "string") {
             resultParts.push(part);
             continue;
         }
@@ -165,8 +168,16 @@ async function resolveImports(packageDir: string, filePath: string) {
         const namesToKeep: ImportName[] = [];
         const newImports: (Import & { names: ImportName[] })[] = [];
         for (const name of part.names) {
-            assert(name.name !== true);
-            const resolved = resolveImport(name.name, part.path);
+            if (name.name === true || name.name === undefined) {
+                namesToKeep.push(name);
+                continue;
+            }
+
+            const resolved = resolver.resolveImport(
+                filePath,
+                name.name,
+                part.path
+            );
             if (
                 resolved === undefined ||
                 resolved === part.path ||
@@ -196,9 +207,7 @@ async function resolveImports(packageDir: string, filePath: string) {
 
             didRewrite = true;
         }
-        for (const newImport of newImports) {
-            resultParts.push(newImport, "\n");
-        }
+        resultParts.push(...newImports);
         if (namesToKeep.length > 0) {
             resultParts.push({ ...part, names: namesToKeep });
         }
@@ -214,10 +223,12 @@ export async function resolveImportsInDirectories(
     packageDir: string,
     sourcePaths: readonly string[]
 ): Promise<void> {
+    const resolver = new ImportResolver(packageDir);
+
     for (const sourcePath of sourcePaths) {
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
-            await resolveImports(packageDir, filePath);
+            await resolveImports(resolver, filePath);
         });
     }
 }
