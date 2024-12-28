@@ -29,4 +29,9 @@ export interface AnInterface {
 
 export class AClass {}
 
+export enum AnEnum {
+    A,
+    B,
+}
+
 export { justAnExport, anotherExport as renamedExport };

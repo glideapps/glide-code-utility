@@ -147,6 +147,8 @@
         "\n\n",
         "export class AClass {}",
         "\n\n",
+        "export enum AnEnum {\n    A,\n    B,\n}",
+        "\n\n",
         "export { justAnExport, anotherExport as renamedExport };",
         "\n"
     ],
@@ -159,6 +161,7 @@
         "AType",
         "AnInterface",
         "AClass",
+        "AnEnum",
         "justAnExport",
         "renamedExport"
     ]

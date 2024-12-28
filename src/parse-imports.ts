@@ -206,7 +206,8 @@ function parseImportOrExport(
             case "function_declaration":
             case "type_alias_declaration":
             case "interface_declaration":
-            case "class_declaration": {
+            case "class_declaration":
+            case "enum_declaration": {
                 if (gatherDirectExports) {
                     const name = child.childForFieldName("name");
                     assert(name !== null, filePath);
@@ -318,11 +319,13 @@ function gatherDynamicImports(
     }
 }
 
-export function readFileAndParseAllImports(filePath: string): {
-    parts: Parts;
-    dynamicImportPaths: readonly string[];
-    directExports: readonly string[];
-} {
+export interface AllImports {
+    readonly parts: Parts;
+    readonly dynamicImportPaths: readonly string[];
+    readonly directExports: readonly string[];
+}
+
+export function readFileAndParseAllImports(filePath: string): AllImports {
     const content = fs.readFileSync(filePath, "utf8");
     const { parts, tree, directExports } = parseImports(content, filePath);
     // console.log(filePath, tree.rootNode.toString());
