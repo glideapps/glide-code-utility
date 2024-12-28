@@ -28,6 +28,7 @@ export interface AnInterface {
 }
 
 export class AClass {}
+export abstract class AnAbstractClass {}
 
 export enum AnEnum {
     A,
@@ -39,3 +40,5 @@ export function* aGenerator() {
 }
 
 export { justAnExport, anotherExport as renamedExport };
+
+import full, { type aType } from "ugh";

@@ -146,12 +146,29 @@
         "export interface AnInterface {\n    aField: number;\n}",
         "\n\n",
         "export class AClass {}",
+        "\n",
+        "export abstract class AnAbstractClass {}",
         "\n\n",
         "export enum AnEnum {\n    A,\n    B,\n}",
         "\n\n",
         "export function* aGenerator() {\n    yield 123;\n}",
         "\n\n",
         "export { justAnExport, anotherExport as renamedExport };",
+        "\n\n",
+        {
+            "kind": "import",
+            "names": [
+                {
+                    "isType": false,
+                    "as": "full"
+                },
+                {
+                    "isType": true,
+                    "name": "aType"
+                }
+            ],
+            "path": "ugh"
+        },
         "\n"
     ],
     "dynamicImportPaths": ["foo"],
@@ -163,6 +180,7 @@
         "AType",
         "AnInterface",
         "AClass",
+        "AnAbstractClass",
         "AnEnum",
         "aGenerator",
         "justAnExport",

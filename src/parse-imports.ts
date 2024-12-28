@@ -26,6 +26,10 @@ export function getWildcardImport(p: Import): ImportName | undefined {
     return n;
 }
 
+export function hasFullImports(p: Import): boolean {
+    return p.names.some((n) => typeof n.name !== "string");
+}
+
 export function isTypeImport(p: Import): boolean {
     const isType = p.names.some((n) => n.isType);
     assert(p.names.every((n) => n.isType === isType));
@@ -208,6 +212,7 @@ function parseImportOrExport(
             case "type_alias_declaration":
             case "interface_declaration":
             case "class_declaration":
+            case "abstract_class_declaration":
             case "enum_declaration": {
                 if (gatherDirectExports) {
                     const name = child.childForFieldName("name");
@@ -346,9 +351,11 @@ export function unparseImports(parts: Parts): string {
                 return p;
             } else {
                 let notBraced: string[] = [];
-                let bracedIsType = p.names.every(
-                    (n) => n.isType || typeof n.name !== "string"
-                );
+                let bracedIsType =
+                    !hasFullImports(p) &&
+                    p.names.every(
+                        (n) => n.isType || typeof n.name !== "string"
+                    );
                 let braced: string[] = [];
 
                 for (const n of p.names) {
@@ -404,9 +411,14 @@ export async function unparseImportsAndWriteFile(
     prettier: boolean
 ): Promise<void> {
     const content = unparseImports(parts);
-    fs.writeFileSync(filePath, content, "utf8");
-    if (prettier) {
-        const { dir, base } = path.parse(filePath);
-        await $`npx prettier --write ${base}`.cwd(dir);
+    if (content.trim() === "") {
+        console.log("deleting empty file", filePath);
+        fs.unlinkSync(filePath);
+    } else {
+        fs.writeFileSync(filePath, content, "utf8");
+        if (prettier) {
+            const { dir, base } = path.parse(filePath);
+            await $`npx prettier --write ${base}`.cwd(dir);
+        }
     }
 }
