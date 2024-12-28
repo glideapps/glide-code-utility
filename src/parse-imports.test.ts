@@ -12,6 +12,7 @@ interface TestCase {
     readonly filePath: string;
     readonly parts: Parts;
     readonly dynamicImportPaths: readonly string[];
+    readonly directExports: readonly string[];
 }
 
 function readTestCases(): readonly TestCase[] {
@@ -26,10 +27,19 @@ function readTestCases(): readonly TestCase[] {
 }
 
 describe("parseImports", () => {
-    for (const { filePath, parts, dynamicImportPaths } of readTestCases()) {
+    for (const {
+        filePath,
+        parts,
+        dynamicImportPaths,
+        directExports,
+    } of readTestCases()) {
         test(filePath, () => {
             const results = readFileAndParseAllImports(filePath);
-            expect(results).toEqual({ parts, dynamicImportPaths });
+            expect(results).toEqual({
+                parts,
+                dynamicImportPaths,
+                directExports,
+            });
         });
     }
 });

@@ -74,7 +74,8 @@ function findChildByType(
 function parseImportOrExport(
     code: string,
     node: SyntaxNode,
-    filePath: string
+    filePath: string,
+    directExports: Set<string>
 ): Import | undefined {
     const kind =
         node.type === "import_statement"
@@ -91,12 +92,16 @@ function parseImportOrExport(
         return undefined;
     }
 
-    // Find the string literal with the module path
+    // Find the string literal with the module path.  If `path` is
+    // `undefined`, we only gather direct exports.
+    let path: string | undefined;
     const sourceNode = findChildByType(node, ["string"]);
-    if (sourceNode === undefined) return undefined;
-    const sourceFragmentNode = sourceNode.child(1);
-    assert(sourceFragmentNode?.type === "string_fragment", filePath);
-    const path = sourceFragmentNode.text;
+    if (sourceNode !== undefined) {
+        const sourceFragmentNode = sourceNode.child(1);
+        assert(sourceFragmentNode?.type === "string_fragment", filePath);
+        path = sourceFragmentNode.text;
+    }
+    const gatherDirectExports = kind === "export" && path === undefined;
 
     const typeNode = findChildByType(node, ["type"]);
     const globalIsType = typeNode !== undefined;
@@ -134,6 +139,14 @@ function parseImportOrExport(
             name: importName,
             as: importName === aliasName ? undefined : aliasName,
         });
+
+        if (gatherDirectExports) {
+            directExports.add(aliasName ?? importName);
+        }
+    }
+
+    if (kind === "export") {
+        debugger;
     }
 
     // clauseNode might contain multiple children (default import, named imports, namespace imports, etc.)
@@ -190,12 +203,35 @@ function parseImportOrExport(
                 });
                 break;
             }
+            case "function_declaration":
+            case "type_alias_declaration":
+            case "interface_declaration":
+            case "class_declaration": {
+                if (gatherDirectExports) {
+                    const name = child.childForFieldName("name");
+                    assert(name !== null, filePath);
+                    directExports.add(name.text);
+                }
+                break;
+            }
+            case "lexical_declaration":
+            case "variable_declaration": {
+                if (gatherDirectExports) {
+                    const variableName =
+                        child.namedChild(0)?.childForFieldName("name") ??
+                        undefined;
+                    assert(variableName !== undefined, filePath);
+                    directExports.add(variableName.text);
+                }
+                break;
+            }
             default:
                 // For other child types, we skip or parse as needed
                 break;
         }
     }
 
+    if (path === undefined) return undefined;
     return { kind, names, path };
 }
 
@@ -203,7 +239,7 @@ function parseImportOrExport(
 function parseImports(
     code: string,
     filePath: string
-): { parts: Parts; tree: Tree } {
+): { parts: Parts; tree: Tree; directExports: Set<string> } {
     const parser = new Parser();
     parser.setLanguage(
         filePath.endsWith("x") ? TypeScript.tsx : TypeScript.typescript
@@ -221,13 +257,15 @@ function parseImports(
     const parts: Part[] = [];
     let currentIndex = 0;
 
+    const directExports = new Set<string>();
+
     for (const node of imexNodes) {
         // Grab the code before this statement
         if (node.startIndex > currentIndex) {
             parts.push(code.slice(currentIndex, node.startIndex));
         }
         // Parse
-        const parsed = parseImportOrExport(code, node, filePath);
+        const parsed = parseImportOrExport(code, node, filePath, directExports);
         if (parsed !== undefined) {
             parts.push(parsed);
         } else {
@@ -242,7 +280,7 @@ function parseImports(
         parts.push(code.slice(currentIndex));
     }
 
-    return { parts, tree };
+    return { parts, tree, directExports };
 }
 
 export function readFileAndParseImports(filePath: string): Parts {
@@ -283,13 +321,18 @@ function gatherDynamicImports(
 export function readFileAndParseAllImports(filePath: string): {
     parts: Parts;
     dynamicImportPaths: readonly string[];
+    directExports: readonly string[];
 } {
     const content = fs.readFileSync(filePath, "utf8");
-    const { parts, tree } = parseImports(content, filePath);
+    const { parts, tree, directExports } = parseImports(content, filePath);
     // console.log(filePath, tree.rootNode.toString());
     const importPaths = new Set<string>();
     gatherDynamicImports(tree.rootNode, importPaths, filePath);
-    return { parts, dynamicImportPaths: Array.from(importPaths) };
+    return {
+        parts,
+        dynamicImportPaths: Array.from(importPaths),
+        directExports: Array.from(directExports),
+    };
 }
 
 export function unparseImports(parts: Parts): string {

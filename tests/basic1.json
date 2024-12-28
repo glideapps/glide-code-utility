@@ -133,8 +133,33 @@
             "path": "foo"
         },
         "\n\n",
-        "export async function bla() {\n    const foo = await import(\"foo\");\n    const bar = await import(foo);\n}",
+        "export async function aFunction() {\n    const foo = await import(\"foo\");\n    const bar = await import(foo);\n}",
+        "\n\n",
+        "export const aConstant = 123;",
+        "\n",
+        "export let aLet = 123;",
+        "\n",
+        "export var aVar = 123;",
+        "\n\n",
+        "export type AType = number;",
+        "\n\n",
+        "export interface AnInterface {\n    aField: number;\n}",
+        "\n\n",
+        "export class AClass {}",
+        "\n\n",
+        "export { justAnExport, anotherExport as renamedExport };",
         "\n"
     ],
-    "dynamicImportPaths": ["foo"]
+    "dynamicImportPaths": ["foo"],
+    "directExports": [
+        "aFunction",
+        "aConstant",
+        "aLet",
+        "aVar",
+        "AType",
+        "AnInterface",
+        "AClass",
+        "justAnExport",
+        "renamedExport"
+    ]
 }
