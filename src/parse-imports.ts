@@ -251,26 +251,32 @@ export function readFileAndParseImports(filePath: string): Parts {
     return parts;
 }
 
-function gatherDynamicImports(node: SyntaxNode, importPaths: Set<string>) {
+function gatherDynamicImports(
+    node: SyntaxNode,
+    importPaths: Set<string>,
+    filePath: string
+) {
     if (node.type === "call_expression") {
         const fn = node.child(0);
-        assert(fn !== null);
+        assert(fn !== null, filePath);
         if (fn?.type === "import") {
             const args = node.child(1);
-            assert(args?.type === "arguments");
-            assert(args.childCount === 3);
+            assert(args?.type === "arguments", filePath);
+            assert(args.childCount === 3, filePath);
             const arg = args.child(1);
-            assert(arg?.type === "string");
-            const path = arg?.child(1)?.text;
-            assert(typeof path === "string");
-            importPaths.add(path);
-            return;
+            // If it's not a string, it's a variable, which we can't resolve.
+            if (arg?.type === "string") {
+                const path = arg?.child(1)?.text;
+                assert(typeof path === "string", filePath);
+                importPaths.add(path);
+                return;
+            }
         }
     }
     for (let i = 0; i < node.childCount; i++) {
         const child = node.child(i);
         if (child === null) continue;
-        gatherDynamicImports(child, importPaths);
+        gatherDynamicImports(child, importPaths, filePath);
     }
 }
 
@@ -282,7 +288,7 @@ export function readFileAndParseAllImports(filePath: string): {
     const { parts, tree } = parseImports(content, filePath);
     // console.log(filePath, tree.rootNode.toString());
     const importPaths = new Set<string>();
-    gatherDynamicImports(tree.rootNode, importPaths);
+    gatherDynamicImports(tree.rootNode, importPaths, filePath);
     return { parts, dynamicImportPaths: Array.from(importPaths) };
 }
 

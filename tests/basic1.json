@@ -133,7 +133,7 @@
             "path": "foo"
         },
         "\n\n",
-        "export async function bla() {\n    const foo = await import(\"foo\");\n}",
+        "export async function bla() {\n    const foo = await import(\"foo\");\n    const bar = await import(foo);\n}",
         "\n"
     ],
     "dynamicImportPaths": ["foo"]

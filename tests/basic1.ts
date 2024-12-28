@@ -14,4 +14,5 @@ import { type, as } from "foo";
 
 export async function bla() {
     const foo = await import("foo");
+    const bar = await import(foo);
 }
