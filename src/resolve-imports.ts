@@ -53,6 +53,11 @@ function findTSFile(filePath: string) {
     process.exit(1);
 }
 
+interface ResolvedImport {
+    readonly path: string;
+    readonly name: string;
+}
+
 class ImportResolver {
     constructor(private readonly packageDir: string) {}
 
@@ -74,17 +79,25 @@ class ImportResolver {
         sourceFilePath: string,
         name: string,
         importedFromPath: string
-    ): string | undefined {
+    ): ResolvedImport | undefined {
         let currentFilePath = sourceFilePath;
         // If this is set, it's either a path to an NPM package, or the
         // absolute path to a TypeScript file.
         let lastSuccessfulPath: string | undefined;
+        let lastSuccessfulName: string | undefined;
 
-        function resolveLastSucessfulPath() {
+        function resolveLastSucessfulPath(): ResolvedImport | undefined {
             const stripSuffixes = [/(^|\/)index\.tsx?$/, /\.tsx?$/];
 
-            if (lastSuccessfulPath === undefined) return undefined;
-            if (!lastSuccessfulPath.startsWith("/")) return lastSuccessfulPath;
+            if (lastSuccessfulPath === undefined) {
+                assert(lastSuccessfulName === undefined);
+                return undefined;
+            }
+            assert(lastSuccessfulName !== undefined);
+
+            if (!lastSuccessfulPath.startsWith("/")) {
+                return { path: lastSuccessfulPath, name: lastSuccessfulName };
+            }
 
             let relative = path.relative(
                 path.parse(sourceFilePath).dir,
@@ -100,11 +113,11 @@ class ImportResolver {
             }
 
             if (relative.startsWith(".")) {
-                return relative;
+                return { path: relative, name: lastSuccessfulName };
             } else if (relative === "") {
-                return ".";
+                return { path: ".", name: lastSuccessfulName };
             } else {
-                return "./" + relative;
+                return { path: "./" + relative, name: lastSuccessfulName };
             }
         }
 
@@ -120,16 +133,21 @@ class ImportResolver {
                     lastSuccessfulPath.startsWith("/")
                 ) {
                     lastSuccessfulPath = nextFilePath;
+                    if (lastSuccessfulPath !== undefined) {
+                        lastSuccessfulName = name;
+                    }
                 }
             } else {
                 const glideImportPath = parseGlideImportPath(importedFromPath);
-                if (glideImportPath === undefined)
+                if (glideImportPath === undefined) {
                     return resolveLastSucessfulPath();
+                }
                 const { packageName, subpath } = glideImportPath;
 
                 nextFilePath = this.findImportedFile(packageName, subpath);
 
                 lastSuccessfulPath = importedFromPath;
+                lastSuccessfulName = name;
             }
             if (nextFilePath === undefined) return resolveLastSucessfulPath();
 
@@ -139,9 +157,15 @@ class ImportResolver {
                 // FIXME: handle wildcard imports by recursing
                 if (getWildcardImport(part) !== undefined) continue;
 
-                if (part.names.some((n) => n.name === name)) {
+                const n = part.names.find(
+                    (n) =>
+                        typeof n.name === "string" && (n.as ?? n.name) === name
+                );
+                if (n !== undefined) {
+                    assert(typeof n.name === "string");
                     importedFromPath = part.path;
                     currentFilePath = nextFilePath;
+                    name = n.name;
                     continue again;
                 }
             }
@@ -152,6 +176,29 @@ class ImportResolver {
 }
 
 async function resolveImports(resolver: ImportResolver, filePath: string) {
+    function needsRewrite(
+        originalName: string,
+        originalPath: string,
+        resolved: ResolvedImport | undefined
+    ): boolean {
+        if (resolved === undefined) return false;
+        if (resolved.path === originalPath) {
+            assert(
+                resolved.name === originalName,
+                `in ${filePath}: ${originalName} -> ${resolved.name}`
+            );
+            return false;
+        }
+        if (dontRewrite[originalPath]?.[resolved.path] === true) {
+            assert(
+                resolved.name === originalName,
+                `in ${filePath}: ${originalName} -> ${resolved.name}`
+            );
+            return false;
+        }
+        return true;
+    }
+
     assert(isTSFile(filePath));
 
     const parts = readFileAndParseImports(filePath);
@@ -178,19 +225,16 @@ async function resolveImports(resolver: ImportResolver, filePath: string) {
                 name.name,
                 part.path
             );
-            if (
-                resolved === undefined ||
-                resolved === part.path ||
-                dontRewrite[part.path]?.[resolved] === true
-            ) {
+            if (!needsRewrite(name.name, part.path, resolved)) {
                 namesToKeep.push(name);
                 continue;
             }
+            assert(resolved !== undefined);
 
             // console.log(`${name}: ${part.path} -> ${resolved}`);
             let newImport: (Import & { names: ImportName[] }) | undefined;
             for (const i of newImports) {
-                if (i.path === resolved) {
+                if (i.path === resolved.path) {
                     newImport = i;
                     break;
                 }
@@ -199,11 +243,17 @@ async function resolveImports(resolver: ImportResolver, filePath: string) {
                 newImport = {
                     kind: part.kind,
                     names: [],
-                    path: resolved,
+                    path: resolved.path,
                 };
                 newImports.push(newImport);
             }
-            newImport.names.push(name);
+
+            const as = name.as ?? name.name;
+            newImport.names.push({
+                ...name,
+                name: resolved.name,
+                as: resolved.name === as ? undefined : as,
+            });
 
             didRewrite = true;
         }
