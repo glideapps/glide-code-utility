@@ -1,11 +1,13 @@
 import fs from "fs";
 import path from "path";
-import { assert } from "@glideapps/ts-necessities";
+import { assert, DefaultMap } from "@glideapps/ts-necessities";
 import { isTSFile, walkDirectory } from "./support";
 import {
     getWildcardImport,
+    readFileAndParseAllImports,
     readFileAndParseImports,
     unparseImportsAndWriteFile,
+    type AllImports,
     type Import,
     type ImportName,
     type Part,
@@ -59,6 +61,10 @@ interface ResolvedImport {
 }
 
 class ImportResolver {
+    private readonly parsedImports = new DefaultMap<string, AllImports>(
+        readFileAndParseAllImports
+    );
+
     constructor(private readonly packageDir: string) {}
 
     private findImportedFile(
@@ -120,61 +126,81 @@ class ImportResolver {
             }
         }
 
-        for (;;) {
-            let nextFilePath: string | undefined;
+        let nextFilePath: string | undefined;
 
-            if (importedFromPath.startsWith(".")) {
-                const { dir } = path.parse(currentFilePath);
-                nextFilePath = findTSFile(path.join(dir, importedFromPath));
+        if (importedFromPath.startsWith(".")) {
+            const { dir } = path.parse(currentFilePath);
+            nextFilePath = findTSFile(path.join(dir, importedFromPath));
 
-                if (
-                    lastSuccessfulPath === undefined ||
-                    lastSuccessfulPath.startsWith("/")
-                ) {
-                    lastSuccessfulPath = nextFilePath;
-                    if (lastSuccessfulPath !== undefined) {
-                        lastSuccessfulName = name;
-                    }
-                }
-            } else {
-                const glideImportPath = parseGlideImportPath(importedFromPath);
-                if (glideImportPath === undefined) {
-                    return resolveLastSucessfulPath();
-                }
-                const { packageName, subpath } = glideImportPath;
-
-                nextFilePath = this.findImportedFile(packageName, subpath);
-
-                lastSuccessfulPath = importedFromPath;
-                lastSuccessfulName = name;
-            }
-            if (nextFilePath === undefined) return resolveLastSucessfulPath();
-
-            const parts = readFileAndParseImports(nextFilePath);
-            for (const part of parts) {
-                if (typeof part === "string") continue;
-                // FIXME: handle wildcard imports by recursing
-                if (getWildcardImport(part) !== undefined) continue;
-
-                const n = part.names.find(
-                    (n) =>
-                        typeof n.name === "string" && (n.as ?? n.name) === name
-                );
-                if (n !== undefined) {
-                    assert(typeof n.name === "string");
-                    return this.resolveImport(
-                        sourceFilePath,
-                        nextFilePath,
-                        n.name,
-                        part.path,
-                        lastSuccessfulPath,
-                        lastSuccessfulName
-                    );
+            if (
+                lastSuccessfulPath === undefined ||
+                lastSuccessfulPath.startsWith("/")
+            ) {
+                lastSuccessfulPath = nextFilePath;
+                if (lastSuccessfulPath !== undefined) {
+                    lastSuccessfulName = name;
                 }
             }
+        } else {
+            const glideImportPath = parseGlideImportPath(importedFromPath);
+            if (glideImportPath === undefined) {
+                return resolveLastSucessfulPath();
+            }
+            const { packageName, subpath } = glideImportPath;
 
+            nextFilePath = this.findImportedFile(packageName, subpath);
+
+            lastSuccessfulPath = importedFromPath;
+            lastSuccessfulName = name;
+        }
+        if (nextFilePath === undefined) return resolveLastSucessfulPath();
+
+        const { parts, directExports } = this.parsedImports.get(nextFilePath);
+
+        if (directExports.includes(name)) {
             return resolveLastSucessfulPath();
         }
+
+        for (const part of parts) {
+            if (typeof part === "string") continue;
+            // FIXME: don't consider imports!!!
+
+            const wildcard = getWildcardImport(part);
+            if (wildcard !== undefined && wildcard.as === undefined) {
+                const resolved = this.resolveImport(
+                    sourceFilePath,
+                    nextFilePath,
+                    name,
+                    part.path,
+                    lastSuccessfulPath,
+                    lastSuccessfulName
+                );
+                if (resolved !== undefined) {
+                    return resolved;
+                }
+            }
+            if (getWildcardImport(part) !== undefined) continue;
+
+            const n = part.names.find(
+                (n) => typeof n.name === "string" && (n.as ?? n.name) === name
+            );
+            if (n !== undefined) {
+                assert(typeof n.name === "string");
+                const resolved = this.resolveImport(
+                    sourceFilePath,
+                    nextFilePath,
+                    n.name,
+                    part.path,
+                    lastSuccessfulPath,
+                    lastSuccessfulName
+                );
+                if (resolved !== undefined) {
+                    return resolved;
+                }
+            }
+        }
+
+        return undefined;
     }
 }
 
