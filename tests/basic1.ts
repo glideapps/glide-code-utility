@@ -11,3 +11,7 @@ import Foo, { Bar as Baz, type Qux } from "foo";
 import JustFoo from "foo";
 import type * as Typefoo from "foo";
 import { type, as } from "foo";
+
+export async function bla() {
+    const foo = await import("foo");
+}

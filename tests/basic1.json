@@ -1,135 +1,140 @@
-[
-    {
-      "kind": "export",
-      "names": [
+{
+    "parts": [
         {
-          "isType": true,
-          "name": "Bar"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "export",
-      "names": [
-        {
-          "isType": false,
-          "name": true
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "export",
-      "names": [
-        {
-          "isType": false,
-          "name": true,
-          "as": "StarFoo"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "export",
-      "names": [
-        {
-          "isType": false,
-          "name": "Bar",
-          "as": "Baz"
+            "kind": "export",
+            "names": [
+                {
+                    "isType": true,
+                    "name": "Bar"
+                }
+            ],
+            "path": "foo"
         },
+        "\n",
         {
-          "isType": true,
-          "name": "Qux"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n\n",
-    "import \"bla\";",
-    "\n\n",
-    {
-      "kind": "import",
-      "names": [
-        {
-          "isType": false,
-          "name": true,
-          "as": "StarFoo"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "import",
-      "names": [
-        {
-          "isType": true,
-          "name": "Bar"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "import",
-      "names": [
-        {
-          "isType": false,
-          "as": "Foo"
+            "kind": "export",
+            "names": [
+                {
+                    "isType": false,
+                    "name": true
+                }
+            ],
+            "path": "foo"
         },
+        "\n",
         {
-          "isType": false,
-          "name": "Bar",
-          "as": "Baz"
+            "kind": "export",
+            "names": [
+                {
+                    "isType": false,
+                    "name": true,
+                    "as": "StarFoo"
+                }
+            ],
+            "path": "foo"
         },
+        "\n",
         {
-          "isType": true,
-          "name": "Qux"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "import",
-      "names": [
-        {
-          "isType": false,
-          "as": "JustFoo"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "import",
-      "names": [
-        {
-          "isType": true,
-          "name": true,
-          "as": "Typefoo"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n",
-    {
-      "kind": "import",
-      "names": [
-        {
-          "isType": false,
-          "name": "type"
+            "kind": "export",
+            "names": [
+                {
+                    "isType": false,
+                    "name": "Bar",
+                    "as": "Baz"
+                },
+                {
+                    "isType": true,
+                    "name": "Qux"
+                }
+            ],
+            "path": "foo"
         },
+        "\n\n",
+        "import \"bla\";",
+        "\n\n",
         {
-          "isType": false,
-          "name": "as"
-        }
-      ],
-      "path": "foo"
-    },
-    "\n"
-  ]
+            "kind": "import",
+            "names": [
+                {
+                    "isType": false,
+                    "name": true,
+                    "as": "StarFoo"
+                }
+            ],
+            "path": "foo"
+        },
+        "\n",
+        {
+            "kind": "import",
+            "names": [
+                {
+                    "isType": true,
+                    "name": "Bar"
+                }
+            ],
+            "path": "foo"
+        },
+        "\n",
+        {
+            "kind": "import",
+            "names": [
+                {
+                    "isType": false,
+                    "as": "Foo"
+                },
+                {
+                    "isType": false,
+                    "name": "Bar",
+                    "as": "Baz"
+                },
+                {
+                    "isType": true,
+                    "name": "Qux"
+                }
+            ],
+            "path": "foo"
+        },
+        "\n",
+        {
+            "kind": "import",
+            "names": [
+                {
+                    "isType": false,
+                    "as": "JustFoo"
+                }
+            ],
+            "path": "foo"
+        },
+        "\n",
+        {
+            "kind": "import",
+            "names": [
+                {
+                    "isType": true,
+                    "name": true,
+                    "as": "Typefoo"
+                }
+            ],
+            "path": "foo"
+        },
+        "\n",
+        {
+            "kind": "import",
+            "names": [
+                {
+                    "isType": false,
+                    "name": "type"
+                },
+                {
+                    "isType": false,
+                    "name": "as"
+                }
+            ],
+            "path": "foo"
+        },
+        "\n\n",
+        "export async function bla() {\n    const foo = await import(\"foo\");\n}",
+        "\n"
+    ],
+    "dynamicImportPaths": ["foo"]
+}

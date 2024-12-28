@@ -2,7 +2,7 @@ import { $ } from "bun";
 import fs from "fs";
 import path from "path";
 import { assert, panic } from "@glideapps/ts-necessities";
-import Parser, { type SyntaxNode } from "tree-sitter";
+import Parser, { type SyntaxNode, type Tree } from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
 
 export interface ImportName {
@@ -200,7 +200,10 @@ function parseImportOrExport(
 }
 
 // We'll produce Part[] by slicing the source code around each import/export node
-function parseImports(code: string, filePath: string): Part[] {
+function parseImports(
+    code: string,
+    filePath: string
+): { parts: Parts; tree: Tree } {
     const parser = new Parser();
     parser.setLanguage(
         filePath.endsWith("x") ? TypeScript.tsx : TypeScript.typescript
@@ -239,12 +242,48 @@ function parseImports(code: string, filePath: string): Part[] {
         parts.push(code.slice(currentIndex));
     }
 
-    return parts;
+    return { parts, tree };
 }
 
 export function readFileAndParseImports(filePath: string): Parts {
     const content = fs.readFileSync(filePath, "utf8");
-    return parseImports(content, filePath);
+    const { parts } = parseImports(content, filePath);
+    return parts;
+}
+
+function gatherDynamicImports(node: SyntaxNode, importPaths: Set<string>) {
+    if (node.type === "call_expression") {
+        const fn = node.child(0);
+        assert(fn !== null);
+        if (fn?.type === "import") {
+            const args = node.child(1);
+            assert(args?.type === "arguments");
+            assert(args.childCount === 3);
+            const arg = args.child(1);
+            assert(arg?.type === "string");
+            const path = arg?.child(1)?.text;
+            assert(typeof path === "string");
+            importPaths.add(path);
+            return;
+        }
+    }
+    for (let i = 0; i < node.childCount; i++) {
+        const child = node.child(i);
+        if (child === null) continue;
+        gatherDynamicImports(child, importPaths);
+    }
+}
+
+export function readFileAndParseAllImports(filePath: string): {
+    parts: Parts;
+    dynamicImportPaths: readonly string[];
+} {
+    const content = fs.readFileSync(filePath, "utf8");
+    const { parts, tree } = parseImports(content, filePath);
+    // console.log(filePath, tree.rootNode.toString());
+    const importPaths = new Set<string>();
+    gatherDynamicImports(tree.rootNode, importPaths);
+    return { parts, dynamicImportPaths: Array.from(importPaths) };
 }
 
 export function unparseImports(parts: Parts): string {

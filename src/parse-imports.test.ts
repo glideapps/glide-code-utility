@@ -2,7 +2,7 @@ import { expect, describe, test } from "bun:test";
 import * as fs from "fs";
 import * as path from "path";
 import {
-    readFileAndParseImports,
+    readFileAndParseAllImports,
     unparseImports,
     type Parts,
 } from "./parse-imports";
@@ -11,6 +11,7 @@ import { mapFilterUndefined } from "@glideapps/ts-necessities";
 interface TestCase {
     readonly filePath: string;
     readonly parts: Parts;
+    readonly dynamicImportPaths: readonly string[];
 }
 
 function readTestCases(): readonly TestCase[] {
@@ -19,16 +20,16 @@ function readTestCases(): readonly TestCase[] {
     return mapFilterUndefined(fs.readdirSync(testsPath), (f) => {
         if (!f.endsWith(".ts")) return undefined;
         const jsonPath = path.join(testsPath, f.replace(/\.ts$/, ".json"));
-        const parts = JSON.parse(fs.readFileSync(jsonPath, "utf8")) as Parts;
-        return { filePath: path.join(testsPath, f), parts };
+        const json = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+        return { filePath: path.join(testsPath, f), ...json };
     });
 }
 
 describe("parseImports", () => {
-    for (const { filePath, parts } of readTestCases()) {
+    for (const { filePath, parts, dynamicImportPaths } of readTestCases()) {
         test(filePath, () => {
-            const parts = readFileAndParseImports(filePath);
-            expect(parts).toEqual(parts);
+            const results = readFileAndParseAllImports(filePath);
+            expect(results).toEqual({ parts, dynamicImportPaths });
         });
     }
 });
