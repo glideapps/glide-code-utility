@@ -163,7 +163,7 @@ class ImportResolver {
 
         for (const part of parts) {
             if (typeof part === "string") continue;
-            // FIXME: don't consider imports!!!
+            if (part.kind !== "export") continue;
 
             const wildcard = getWildcardImport(part);
             if (wildcard !== undefined && wildcard.as === undefined) {
@@ -178,8 +178,8 @@ class ImportResolver {
                 if (resolved !== undefined) {
                     return resolved;
                 }
+                continue;
             }
-            if (getWildcardImport(part) !== undefined) continue;
 
             const n = part.names.find(
                 (n) => typeof n.name === "string" && (n.as ?? n.name) === name
