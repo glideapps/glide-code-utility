@@ -34,4 +34,8 @@ export enum AnEnum {
     B,
 }
 
+export function* aGenerator() {
+    yield 123;
+}
+
 export { justAnExport, anotherExport as renamedExport };

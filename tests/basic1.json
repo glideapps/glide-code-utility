@@ -149,6 +149,8 @@
         "\n\n",
         "export enum AnEnum {\n    A,\n    B,\n}",
         "\n\n",
+        "export function* aGenerator() {\n    yield 123;\n}",
+        "\n\n",
         "export { justAnExport, anotherExport as renamedExport };",
         "\n"
     ],
@@ -162,6 +164,7 @@
         "AnInterface",
         "AClass",
         "AnEnum",
+        "aGenerator",
         "justAnExport",
         "renamedExport"
     ]

@@ -204,6 +204,7 @@ function parseImportOrExport(
                 break;
             }
             case "function_declaration":
+            case "generator_function_declaration":
             case "type_alias_declaration":
             case "interface_declaration":
             case "class_declaration":
