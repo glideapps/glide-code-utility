@@ -77,15 +77,14 @@ class ImportResolver {
 
     public resolveImport(
         sourceFilePath: string,
+        currentFilePath: string,
         name: string,
-        importedFromPath: string
-    ): ResolvedImport | undefined {
-        let currentFilePath = sourceFilePath;
+        importedFromPath: string,
         // If this is set, it's either a path to an NPM package, or the
         // absolute path to a TypeScript file.
-        let lastSuccessfulPath: string | undefined;
-        let lastSuccessfulName: string | undefined;
-
+        lastSuccessfulPath: string | undefined,
+        lastSuccessfulName: string | undefined
+    ): ResolvedImport | undefined {
         function resolveLastSucessfulPath(): ResolvedImport | undefined {
             const stripSuffixes = [/(^|\/)index\.tsx?$/, /\.tsx?$/];
 
@@ -121,7 +120,7 @@ class ImportResolver {
             }
         }
 
-        again: for (;;) {
+        for (;;) {
             let nextFilePath: string | undefined;
 
             if (importedFromPath.startsWith(".")) {
@@ -163,10 +162,14 @@ class ImportResolver {
                 );
                 if (n !== undefined) {
                     assert(typeof n.name === "string");
-                    importedFromPath = part.path;
-                    currentFilePath = nextFilePath;
-                    name = n.name;
-                    continue again;
+                    return this.resolveImport(
+                        sourceFilePath,
+                        nextFilePath,
+                        n.name,
+                        part.path,
+                        lastSuccessfulPath,
+                        lastSuccessfulName
+                    );
                 }
             }
 
@@ -222,8 +225,11 @@ async function resolveImports(resolver: ImportResolver, filePath: string) {
 
             const resolved = resolver.resolveImport(
                 filePath,
+                filePath,
                 name.name,
-                part.path
+                part.path,
+                undefined,
+                undefined
             );
             if (!needsRewrite(name.name, part.path, resolved)) {
                 namesToKeep.push(name);
