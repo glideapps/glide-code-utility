@@ -1,0 +1,135 @@
+[
+    {
+      "kind": "export",
+      "names": [
+        {
+          "isType": true,
+          "name": "Bar"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "export",
+      "names": [
+        {
+          "isType": false,
+          "name": true
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "export",
+      "names": [
+        {
+          "isType": false,
+          "name": true,
+          "as": "StarFoo"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "export",
+      "names": [
+        {
+          "isType": false,
+          "name": "Bar",
+          "as": "Baz"
+        },
+        {
+          "isType": true,
+          "name": "Qux"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n\n",
+    "import \"bla\";",
+    "\n\n",
+    {
+      "kind": "import",
+      "names": [
+        {
+          "isType": false,
+          "name": true,
+          "as": "StarFoo"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "import",
+      "names": [
+        {
+          "isType": true,
+          "name": "Bar"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "import",
+      "names": [
+        {
+          "isType": false,
+          "as": "Foo"
+        },
+        {
+          "isType": false,
+          "name": "Bar",
+          "as": "Baz"
+        },
+        {
+          "isType": true,
+          "name": "Qux"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "import",
+      "names": [
+        {
+          "isType": false,
+          "as": "JustFoo"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "import",
+      "names": [
+        {
+          "isType": true,
+          "name": true,
+          "as": "Typefoo"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n",
+    {
+      "kind": "import",
+      "names": [
+        {
+          "isType": false,
+          "name": "type"
+        },
+        {
+          "isType": false,
+          "name": "as"
+        }
+      ],
+      "path": "foo"
+    },
+    "\n"
+  ]

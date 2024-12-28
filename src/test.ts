@@ -1,17 +1,17 @@
-import * as fs from "fs";
-import { parseImports, unparseImports } from "./parse-imports";
+import {
+    readFileAndParseImports,
+    unparseImportsAndWriteFile,
+} from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
 
 export function test(path: string) {
     walkDirectory(path, async (filePath) => {
         if (!isTSFile(filePath)) return;
 
-        const content = fs.readFileSync(filePath, "utf8");
-
-        const parts = parseImports(content);
+        const parts = readFileAndParseImports(filePath);
 
         // console.log(JSON.stringify(parts, null, 4));
 
-        fs.writeFileSync(filePath, unparseImports(parts), "utf8");
+        unparseImportsAndWriteFile(parts, filePath, false);
     });
 }
