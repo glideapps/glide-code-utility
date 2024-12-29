@@ -107,7 +107,7 @@ program
         "Paths to directories with source files to process"
     )
     .option("-p, --prettier", "Prettify the output")
-    .description("FIXME: write")
+    .description("Resolve imports of re-exported symbols")
     .action(async (packagesPath, sourceFilePaths, options) => {
         resolveImportsInDirectories(
             packagesPath,
@@ -122,7 +122,7 @@ program
         "<source-paths...>",
         "Paths to directories with source files to process"
     )
-    .description("FIXME: write")
+    .description("Count the number of imports of each symbol")
     .action(async (sourceFilePaths) => {
         countImports(sourceFilePaths);
     });
@@ -133,7 +133,7 @@ program
         "<source-paths...>",
         "Paths to directories with source files to process"
     )
-    .description("FIXME: write")
+    .description("Remove re-exports of symbols")
     .action(async (sourceFilePaths) => {
         removeReExports(sourceFilePaths);
     });
@@ -141,7 +141,7 @@ program
 program
     .command("service-glide")
     .argument("<repo-path>", "Path to the Glide repository")
-    .description("FIXME: write")
+    .description("Do everything to remove indirect imports")
     .action(async (repoPath) => {
         serviceGlide(repoPath);
     });
