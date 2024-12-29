@@ -31,7 +31,7 @@ export async function countImports(
                 if (glideImport === undefined) continue;
 
                 for (const name of part.names) {
-                    if (name.name === true) continue;
+                    if (name.name === true || name.name === undefined) continue;
                     counts
                         .get(sourcePath)
                         .get(glideImport.packageName)

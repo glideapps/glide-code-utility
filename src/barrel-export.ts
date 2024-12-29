@@ -84,7 +84,7 @@ export async function barrelExport(
 
                 const entries = exportStatements.get(partPath);
                 for (const name of part.names) {
-                    assert(name.name !== true);
+                    assert(name.name !== true && name.name !== undefined);
                     if (name.isType) {
                         addType(entries, name.name);
                     } else {
@@ -131,7 +131,7 @@ export async function barrelExport(
                 }
             } else {
                 for (const name of part.names) {
-                    assert(name.name !== true);
+                    assert(name.name !== true && name.name !== undefined);
                     if (name.isType) {
                         if (entries.types !== true) {
                             entries.types.add(name.name);
