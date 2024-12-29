@@ -1,15 +1,16 @@
 import {
-    getWildcardImport,
-    isTypeImport,
+    hasFullImports,
     readFileAndParseImports,
     unparseImportsAndWriteFile,
     type Import,
+    type ImportName,
 } from "./parse-imports";
 import { isTSFile, walkDirectory } from "./support";
 import { DefaultMap } from "@glideapps/ts-necessities";
 
 export async function dedupImports(
-    sourcePaths: readonly string[]
+    sourcePaths: readonly string[],
+    withPrettier: boolean
 ): Promise<void> {
     for (const sourcePath of sourcePaths) {
         await walkDirectory(sourcePath, async (filePath) => {
@@ -17,26 +18,21 @@ export async function dedupImports(
 
             const parts = readFileAndParseImports(filePath);
 
-            // import path -> [names]
-            const nonTypeNames = new DefaultMap<string, string[]>(() => []);
-            const typeNames = new DefaultMap<string, string[]>(() => []);
+            // import path -> names
+            const namesForPath = new DefaultMap<string, ImportName[]>(() => []);
 
             let haveChanges = false;
 
             for (const p of parts) {
                 if (typeof p === "string") continue;
                 if (p.kind !== "import") continue;
+                if (hasFullImports(p)) continue;
 
-                for (const name of p.names) {
-                    if (name.name === true) continue;
-
-                    const map = name.isType ? typeNames : nonTypeNames;
-                    const existing = map.get(p.path);
-                    if (existing.length > 0) {
-                        haveChanges = true;
-                    }
-                    existing.push(name.name);
+                const existing = namesForPath.get(p.path);
+                if (existing.length > 0) {
+                    haveChanges = true;
                 }
+                existing.push(...p.names);
             }
 
             if (!haveChanges) {
@@ -45,15 +41,12 @@ export async function dedupImports(
             }
 
             // import paths already imported from
-            const nonTypesDone = new Set<string>();
-            const typesDone = new Set<string>();
+            const pathsDone = new Set<string>();
 
             function shouldDrop(i: Import) {
                 if (i.kind !== "import") return false;
-                if (getWildcardImport(i) !== undefined) return false;
-                const isType = isTypeImport(i);
-                const set = isType ? typesDone : nonTypesDone;
-                return set.has(i.path);
+                if (hasFullImports(i)) return false;
+                return pathsDone.has(i.path);
             }
 
             const left = Array.from(parts);
@@ -64,24 +57,17 @@ export async function dedupImports(
 
                 if (typeof first !== "string") {
                     if (shouldDrop(first)) continue;
-                    if (first.kind !== "import") {
+                    if (first.kind !== "import" || hasFullImports(first)) {
                         finished.push(first);
                         continue;
                     }
 
-                    const isType = isTypeImport(first);
-                    const allForPath = (isType ? typeNames : nonTypeNames).get(
-                        first.path
-                    );
                     finished.push({
-                        ...first,
-                        names: allForPath.map((n) => ({
-                            isType,
-                            name: n,
-                            as: undefined,
-                        })),
+                        kind: "import",
+                        path: first.path,
+                        names: namesForPath.get(first.path),
                     });
-                    (isType ? typesDone : nonTypesDone).add(first.path);
+                    pathsDone.add(first.path);
                 } else {
                     const second = left[0];
                     if (
@@ -103,7 +89,7 @@ export async function dedupImports(
             }
 
             console.log("writing", filePath);
-            await unparseImportsAndWriteFile(finished, filePath, true);
+            await unparseImportsAndWriteFile(finished, filePath, withPrettier);
         });
     }
 }

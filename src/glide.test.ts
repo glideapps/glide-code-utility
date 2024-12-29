@@ -12,31 +12,31 @@ describe("parseGlideImportPath", () => {
         ["", undefined],
         [
             "@glide/components",
-            { packageName: "components", subpath: undefined },
+            { packageName: "components", subPath: undefined },
         ],
         [
             "@glide/components/Button",
-            { packageName: "components", subpath: "Button" },
+            { packageName: "components", subPath: "Button" },
         ],
         [
             "@glide/components/forms/Input",
-            { packageName: "components", subpath: "forms/Input" },
+            { packageName: "components", subPath: "forms/Input" },
         ],
         [
             "@glide/components/dist/js/Button",
-            { packageName: "components", subpath: "Button" },
+            { packageName: "components", subPath: "Button" },
         ],
         [
             "@glide/components/dist/js/forms/Input",
-            { packageName: "components", subpath: "forms/Input" },
+            { packageName: "components", subPath: "forms/Input" },
         ],
         [
             "@glide/my-components/Button",
-            { packageName: "my-components", subpath: "Button" },
+            { packageName: "my-components", subPath: "Button" },
         ],
         [
             "@glide/components/forms/dist/js/nested",
-            { packageName: "components", subpath: "forms/dist/js/nested" },
+            { packageName: "components", subPath: "forms/dist/js/nested" },
         ],
     ];
 

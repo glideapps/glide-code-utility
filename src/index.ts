@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { findUnusedPackages } from "./find-unused-packages";
+import { fixPackageUse } from "./fix-package-use";
 import { moveFilePackage } from "./move-file-package";
 import { barrelExport } from "./barrel-export";
 import { countDependencyImports } from "./count-dependency-imports";
@@ -9,16 +9,27 @@ import { verbatimImports } from "./verbatim-imports";
 import { resolveImportsInDirectories } from "./resolve-imports";
 import { countImports } from "./count-imports";
 import { removeReExports } from "./remove-re-exports";
+import { readFileAndParseAllImports } from "./parse-imports";
 
 const program = new Command();
 
 program
-    .command("find-unused-packages")
-    .description("Find unused packages in a project directory")
-    .argument("[directory]", "Directory that has the package.json file")
-    .option("-r, --remove", "Remove unused packages from package.json")
-    .action((dir, options) => {
-        findUnusedPackages(dir ?? process.cwd(), options.remove);
+    .command("parse-file")
+    .argument("<file>")
+    .action(async (fileName) => {
+        const parts = readFileAndParseAllImports(fileName);
+        console.log(JSON.stringify(parts, null, 2));
+    });
+
+program
+    .command("fix-package-use")
+    .description(
+        "Add/remove Glide package imports from a package, depending on whether they are used"
+    )
+    .argument("<directory>", "Directory that has the package.json file")
+    .option("-f, --fix", "Actually fix packages in package.json")
+    .action(async (dir, options) => {
+        await fixPackageUse(dir, options.fix);
     });
 
 program
@@ -66,11 +77,12 @@ program
         "<source-paths...>",
         "Paths to directories with source files to process"
     )
+    .option("-p, --prettier", "Prettify the output")
     .description(
         "Rewrites multiple imports of the same package to a single import"
     )
-    .action(async (sourcePaths) => {
-        dedupImports(sourcePaths);
+    .action(async (sourcePaths, options) => {
+        dedupImports(sourcePaths, options.prettier);
     });
 
 program
@@ -93,9 +105,14 @@ program
         "<source-paths...>",
         "Paths to directories with source files to process"
     )
+    .option("-p, --prettier", "Prettify the output")
     .description("FIXME: write")
-    .action(async (packagesPath, sourceFilePaths) => {
-        resolveImportsInDirectories(packagesPath, sourceFilePaths);
+    .action(async (packagesPath, sourceFilePaths, options) => {
+        resolveImportsInDirectories(
+            packagesPath,
+            sourceFilePaths,
+            options.prettier
+        );
     });
 
 program

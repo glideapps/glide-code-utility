@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { assert, DefaultMap } from "@glideapps/ts-necessities";
+import { assert, DefaultMap, defined } from "@glideapps/ts-necessities";
 import { isTSFile, walkDirectory } from "./support";
 import {
     getWildcardImport,
@@ -12,7 +12,7 @@ import {
     type ImportName,
     type Part,
 } from "./parse-imports";
-import { parseGlideImportPath } from "./glide";
+import { makeGlidePackageName, parseGlideImportPath } from "./glide";
 
 // from -> to
 const dontRewrite: Record<string, Record<string, true>> = {
@@ -20,6 +20,8 @@ const dontRewrite: Record<string, Record<string, true>> = {
         "@glide/plugins-codecs": true,
     },
 };
+
+const whitelistedNonGlideImports = new Set(["@glideapps/ts-necessities"]);
 
 // Returns `undefined` if the file shouldn't be followed
 function findTSFile(filePath: string) {
@@ -81,6 +83,40 @@ class ImportResolver {
         return findTSFile(filePath);
     }
 
+    private relativeGlideImportPath(
+        basePath: string,
+        relativePath: string
+    ): string | undefined {
+        assert(relativePath.startsWith("."));
+
+        const parsed = parseGlideImportPath(basePath);
+        if (parsed === undefined) return undefined;
+        const { packageName, subPath } = parsed;
+        if (subPath === undefined) return undefined;
+
+        const packageSrcPath = path.join(this.packageDir, packageName, "src");
+        const fullBasePath = path.join(packageSrcPath, subPath);
+        const fullBaseFilePath = findTSFile(fullBasePath);
+        if (fullBaseFilePath === undefined) return undefined;
+
+        const resolvedPath = path.join(
+            path.parse(fullBaseFilePath).dir,
+            relativePath
+        );
+
+        let newSubPath = resolvedPath.substring(packageSrcPath.length);
+        if (newSubPath.startsWith("/")) {
+            newSubPath = newSubPath.substring(1);
+        }
+
+        let newPath = makeGlidePackageName(packageName);
+        if (newSubPath !== "") {
+            newPath += "/dist/js/" + newSubPath;
+        }
+
+        return newPath;
+    }
+
     public resolveImport(
         sourceFilePath: string,
         currentFilePath: string,
@@ -128,9 +164,17 @@ class ImportResolver {
 
         let nextFilePath: string | undefined;
 
+        debugger;
+
         if (importedFromPath.startsWith(".")) {
             const { dir } = path.parse(currentFilePath);
             nextFilePath = findTSFile(path.join(dir, importedFromPath));
+            // console.log(
+            //     "resolved file",
+            //     currentFilePath,
+            //     importedFromPath,
+            //     nextFilePath
+            // );
 
             if (
                 lastSuccessfulPath === undefined ||
@@ -140,15 +184,27 @@ class ImportResolver {
                 if (lastSuccessfulPath !== undefined) {
                     lastSuccessfulName = name;
                 }
+            } else {
+                const resolved = this.relativeGlideImportPath(
+                    lastSuccessfulPath,
+                    importedFromPath
+                );
+                if (resolved !== undefined) {
+                    lastSuccessfulPath = resolved;
+                    lastSuccessfulName = name;
+                }
             }
         } else {
             const glideImportPath = parseGlideImportPath(importedFromPath);
             if (glideImportPath === undefined) {
+                if (whitelistedNonGlideImports.has(importedFromPath)) {
+                    return { path: importedFromPath, name };
+                }
                 return resolveLastSucessfulPath();
             }
-            const { packageName, subpath } = glideImportPath;
+            const { packageName, subPath } = glideImportPath;
 
-            nextFilePath = this.findImportedFile(packageName, subpath);
+            nextFilePath = this.findImportedFile(packageName, subPath);
 
             lastSuccessfulPath = importedFromPath;
             lastSuccessfulName = name;
@@ -204,7 +260,11 @@ class ImportResolver {
     }
 }
 
-async function resolveImports(resolver: ImportResolver, filePath: string) {
+async function resolveImports(
+    resolver: ImportResolver,
+    filePath: string,
+    withPrettier: boolean
+) {
     function needsRewrite(
         originalName: string,
         originalPath: string,
@@ -297,20 +357,21 @@ async function resolveImports(resolver: ImportResolver, filePath: string) {
 
     if (didRewrite) {
         console.log("Resolved imports in", filePath);
-        await unparseImportsAndWriteFile(resultParts, filePath, false);
+        await unparseImportsAndWriteFile(resultParts, filePath, withPrettier);
     }
 }
 
 export async function resolveImportsInDirectories(
     packageDir: string,
-    sourcePaths: readonly string[]
+    sourcePaths: readonly string[],
+    withPrettier: boolean
 ): Promise<void> {
     const resolver = new ImportResolver(packageDir);
 
     for (const sourcePath of sourcePaths) {
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
-            await resolveImports(resolver, filePath);
+            await resolveImports(resolver, filePath, withPrettier);
         });
     }
 }
