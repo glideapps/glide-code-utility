@@ -260,11 +260,12 @@ class ImportResolver {
     }
 }
 
+// Returns whether the file was modified
 async function resolveImports(
     resolver: ImportResolver,
     filePath: string,
     withPrettier: boolean
-) {
+): Promise<boolean> {
     function needsRewrite(
         originalName: string,
         originalPath: string,
@@ -355,23 +356,34 @@ async function resolveImports(
         }
     }
 
-    if (didRewrite) {
-        console.log("Resolved imports in", filePath);
-        await unparseImportsAndWriteFile(resultParts, filePath, withPrettier);
-    }
+    if (!didRewrite) return false;
+
+    console.log("Resolved imports in", filePath);
+    await unparseImportsAndWriteFile(resultParts, filePath, withPrettier);
+    return true;
 }
 
+// Returns the set of files that were modified
 export async function resolveImportsInDirectories(
     packageDir: string,
     sourcePaths: readonly string[],
     withPrettier: boolean
-): Promise<void> {
+): Promise<Set<string>> {
     const resolver = new ImportResolver(packageDir);
 
+    const modifiedFiles = new Set<string>();
     for (const sourcePath of sourcePaths) {
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
-            await resolveImports(resolver, filePath, withPrettier);
+            const didModify = await resolveImports(
+                resolver,
+                filePath,
+                withPrettier
+            );
+            if (didModify) {
+                modifiedFiles.add(filePath);
+            }
         });
     }
+    return modifiedFiles;
 }

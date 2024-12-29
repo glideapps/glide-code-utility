@@ -6,9 +6,11 @@ import {
 import { walkDirectory, isTSFile } from "./support";
 import { parseGlideImportPath } from "./glide";
 
+// Returns the set of files that were modified
 export async function removeReExports(
     sourcePaths: readonly string[]
-): Promise<void> {
+): Promise<Set<string>> {
+    const modifiedFiles = new Set<string>();
     for (const sourcePath of sourcePaths) {
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
@@ -16,7 +18,7 @@ export async function removeReExports(
             if (
                 path.normalize(filePath) === path.join(sourcePath, "index.ts")
             ) {
-                console.log("ignoring", filePath);
+                // console.log("ignoring", filePath);
                 return;
             }
 
@@ -38,6 +40,8 @@ export async function removeReExports(
 
             console.log("writing", filePath);
             await unparseImportsAndWriteFile(resultParts, filePath, false);
+            modifiedFiles.add(filePath);
         });
     }
+    return modifiedFiles;
 }

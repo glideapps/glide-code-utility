@@ -10,6 +10,7 @@ import { resolveImportsInDirectories } from "./resolve-imports";
 import { countImports } from "./count-imports";
 import { removeReExports } from "./remove-re-exports";
 import { readFileAndParseAllImports } from "./parse-imports";
+import { serviceGlide } from "./service-glide";
 
 const program = new Command();
 
@@ -135,6 +136,14 @@ program
     .description("FIXME: write")
     .action(async (sourceFilePaths) => {
         removeReExports(sourceFilePaths);
+    });
+
+program
+    .command("service-glide")
+    .argument("<repo-path>", "Path to the Glide repository")
+    .description("FIXME: write")
+    .action(async (repoPath) => {
+        serviceGlide(repoPath);
     });
 
 await program.parseAsync(process.argv);

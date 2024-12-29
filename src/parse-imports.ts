@@ -1,9 +1,8 @@
-import { $ } from "bun";
 import fs from "fs";
-import path from "path";
 import { assert, panic } from "@glideapps/ts-necessities";
 import Parser, { type SyntaxNode, type Tree } from "tree-sitter";
 import TypeScript from "tree-sitter-typescript";
+import { prettier } from "./prettier";
 
 export interface ImportName {
     readonly isType: boolean;
@@ -408,7 +407,7 @@ export function unparseImports(parts: Parts): string {
 export async function unparseImportsAndWriteFile(
     parts: Parts,
     filePath: string,
-    prettier: boolean
+    runPrettier: boolean
 ): Promise<void> {
     const content = unparseImports(parts);
     if (content.trim() === "") {
@@ -416,9 +415,8 @@ export async function unparseImportsAndWriteFile(
         fs.unlinkSync(filePath);
     } else {
         fs.writeFileSync(filePath, content, "utf8");
-        if (prettier) {
-            const { dir, base } = path.parse(filePath);
-            await $`npx prettier --write ${base}`.cwd(dir);
+        if (runPrettier) {
+            await prettier(filePath);
         }
     }
 }

@@ -8,10 +8,12 @@ import {
 import { isTSFile, walkDirectory } from "./support";
 import { DefaultMap } from "@glideapps/ts-necessities";
 
+// Returns the set of files that were modified
 export async function dedupImports(
     sourcePaths: readonly string[],
     withPrettier: boolean
-): Promise<void> {
+): Promise<Set<string>> {
+    const modifiedFiles = new Set<string>();
     for (const sourcePath of sourcePaths) {
         await walkDirectory(sourcePath, async (filePath) => {
             if (!isTSFile(filePath)) return;
@@ -90,6 +92,8 @@ export async function dedupImports(
 
             console.log("writing", filePath);
             await unparseImportsAndWriteFile(finished, filePath, withPrettier);
+            modifiedFiles.add(filePath);
         });
     }
+    return modifiedFiles;
 }
