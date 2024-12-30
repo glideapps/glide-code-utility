@@ -15,6 +15,14 @@ import { serviceGlide } from "./service-glide";
 const program = new Command();
 
 program
+    .command("service-glide")
+    .argument("<repo-path>", "Path to the Glide repository")
+    .description("Do everything to remove indirect imports")
+    .action(async (repoPath) => {
+        serviceGlide(repoPath);
+    });
+
+program
     .command("parse-file")
     .argument("<file>")
     .action(async (fileName) => {
@@ -136,14 +144,6 @@ program
     .description("Remove re-exports of symbols")
     .action(async (sourceFilePaths) => {
         removeReExports(sourceFilePaths);
-    });
-
-program
-    .command("service-glide")
-    .argument("<repo-path>", "Path to the Glide repository")
-    .description("Do everything to remove indirect imports")
-    .action(async (repoPath) => {
-        serviceGlide(repoPath);
     });
 
 await program.parseAsync(process.argv);

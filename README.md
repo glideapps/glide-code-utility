@@ -6,7 +6,7 @@ bun install
 
 To run:
 
-```bash
+```
 bun run src/index.ts
 
 Usage: index [options] [command]
@@ -15,20 +15,36 @@ Options:
   -h, --help                                                      display help for command
 
 Commands:
-  fix-package-use [options] [directory]                      Find unused packages in a project directory
-  move-file-package <source-file> <target-directory>              Move a file to a package directory and update its
-                                                                  exports
+  service-glide <repo-path>                                       Do everything to remove indirect imports
+  parse-file <file>
+  fix-package-use [options] <directory>                           Add/remove Glide package imports from a package, depending
+                                                                  on whether they are used
+  move-file-package <source-file> <target-directory>              Move a file to a package directory and update its exports
   barrel-export <package-dir> <source-paths...>                   Generate a barrel export for a package
   rewrite-imports <name> <from-path> <to-path> <source-paths...>  Rewrite import paths in a project
-  count-dependency-imports [directory]                            Iterates through each package dependencies with nx
-                                                                  output and counts the imports of each one.  Useful
-                                                                  for finding instances of light imports where
-                                                                  dependencies could be moved.
-  dedup-imports <source-paths...>                                 Rewrites multiple imports of the same package to a
-                                                                  single import
-  verbatim-imports <source-paths...>                              Rewrites imports to use the verbatim import syntax
-                                                                  with explicit extensions
+  count-dependency-imports [directory]                            Iterates through each package dependencies with nx output
+                                                                  and counts the imports of each one.  Useful for finding
+                                                                  instances of light imports where dependencies could be
+                                                                  moved.
+  dedup-imports [options] <source-paths...>                       Rewrites multiple imports of the same package to a single
+                                                                  import
+  verbatim-imports <source-paths...>                              Rewrites imports to use the verbatim import syntax with
+                                                                  explicit extensions
+  resolve-imports [options] <packages-path> <source-paths...>     Resolve imports of re-exported symbols
+  count-imports <source-paths...>                                 Count the number of imports of each symbol
+  remove-re-exports <source-paths...>                             Remove re-exports of symbols
   help [command]                                                  display help for command
+```
+
+## service-glide
+
+This is what you want to use if you're moving stuff between packages and need
+to clean up.  Please watch the video first:
+
+https://www.loom.com/share/3995cb910caf4f3b85113ff4e957d2d9
+
+```sh
+bun run service-glide ~/Work/glide
 ```
 
 ## fix-package-use
