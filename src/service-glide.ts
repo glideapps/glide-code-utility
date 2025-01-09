@@ -54,5 +54,9 @@ export async function serviceGlide(repoPath: string) {
     console.log(
         `Modified ${allModifiedFiles.size} TypeScript files - running prettier`
     );
-    await concurrentForEach(allModifiedFiles, 10, prettier);
+    await concurrentForEach(allModifiedFiles, 10, async (filePath) => {
+        // We can remove files, so check for that before running prettier.
+        if (!fs.existsSync(filePath)) return;
+        await prettier(filePath);
+    });
 }
