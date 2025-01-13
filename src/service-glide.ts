@@ -32,8 +32,10 @@ export async function serviceGlide(repoPath: string) {
     console.log("removing re-exports");
     const removeModified = await removeReExports(allSourcePaths);
 
-    console.log("de-duping imports");
-    const dedupModified = await dedupImports(allSourcePaths, false);
+    const allModifiedFiles = new Set([...resolveModified, ...removeModified]);
+
+    console.log("de-duping imports in changed files");
+    await dedupImports(Array.from(allModifiedFiles), false);
 
     console.log("fixing package use");
     for (const packageName of packageNames) {
@@ -41,11 +43,6 @@ export async function serviceGlide(repoPath: string) {
         await fixPackageUse(packageDir, true);
     }
 
-    const allModifiedFiles = new Set([
-        ...resolveModified,
-        ...removeModified,
-        ...dedupModified,
-    ]);
     if (allModifiedFiles.size === 0) {
         console.log("No TypeScript file was modified.");
         return;

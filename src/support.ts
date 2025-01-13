@@ -2,17 +2,24 @@ import fs from "fs";
 import path from "path";
 
 export async function walkDirectory(
-    dir: string,
+    dirOrFilePath: string,
     processFile: (path: string) => Promise<void>
 ): Promise<void> {
-    for (const file of fs.readdirSync(dir)) {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
+    if (!fs.existsSync(dirOrFilePath)) return;
 
-        if (stat.isDirectory()) {
-            await walkDirectory(filePath, processFile);
-        } else {
-            await processFile(filePath);
+    // Is `dir` actually a normal file?
+    if (fs.statSync(dirOrFilePath).isFile()) {
+        await processFile(dirOrFilePath);
+    } else {
+        for (const file of fs.readdirSync(dirOrFilePath)) {
+            const filePath = path.join(dirOrFilePath, file);
+            const stat = fs.statSync(filePath);
+
+            if (stat.isDirectory()) {
+                await walkDirectory(filePath, processFile);
+            } else {
+                await processFile(filePath);
+            }
         }
     }
 }
