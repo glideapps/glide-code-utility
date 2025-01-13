@@ -6,21 +6,12 @@ import { dedupImports } from "./dedup-imports";
 import { fixPackageUse } from "./fix-package-use";
 import { prettier } from "./prettier";
 import { concurrentForEach } from "./concurrent";
+import { getGlideSourcePaths } from "./glide";
 
 export async function serviceGlide(repoPath: string) {
     repoPath = path.resolve(repoPath);
 
-    const packageNames = fs
-        .readFileSync(path.join(repoPath, ".topological-packages"), "utf-8")
-        .split("\n")
-        .map((n) => n.trim())
-        .filter((n) => n !== "");
-
-    const allSourcePaths = [
-        ...packageNames.map((n) => path.join(repoPath, "packages", n, "src")),
-        path.join(repoPath, "functions", "src"),
-        path.join(repoPath, "app", "src"),
-    ];
+    const { packageNames, allSourcePaths } = getGlideSourcePaths(repoPath);
 
     console.log("resolving imports");
     const resolveModified = await resolveImportsInDirectories(

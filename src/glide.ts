@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 const glidePrefix = "@glide/";
 const distJSPrefix = "dist/js/";
 
@@ -33,4 +36,22 @@ export function parseGlideImportPath(
 
 export function makeGlidePackageName(packageName: string) {
     return `@glide/${packageName}`;
+}
+
+export function getGlideSourcePaths(repoPath: string) {
+    repoPath = path.resolve(repoPath);
+
+    const packageNames = fs
+        .readFileSync(path.join(repoPath, ".topological-packages"), "utf-8")
+        .split("\n")
+        .map((n) => n.trim())
+        .filter((n) => n !== "");
+
+    const allSourcePaths = [
+        ...packageNames.map((n) => path.join(repoPath, "packages", n, "src")),
+        path.join(repoPath, "functions", "src"),
+        path.join(repoPath, "app", "src"),
+    ];
+
+    return { packageNames, allSourcePaths };
 }
