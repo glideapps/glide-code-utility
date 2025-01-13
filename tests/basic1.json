@@ -153,6 +153,8 @@
         "\n\n",
         "export function* aGenerator() {\n    yield 123;\n}",
         "\n\n",
+        "export const { destructuredExport, anotherDestructuredExport } = something;",
+        "\n\n",
         "export { justAnExport, anotherExport as renamedExport };",
         "\n\n",
         {
@@ -183,6 +185,8 @@
         "AnAbstractClass",
         "AnEnum",
         "aGenerator",
+        "destructuredExport",
+        "anotherDestructuredExport",
         "justAnExport",
         "renamedExport"
     ]

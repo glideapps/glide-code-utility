@@ -148,6 +148,21 @@ function parseImportOrExport(
         }
     }
 
+    function addExportsFromPattern(pattern: SyntaxNode) {
+        assert(gatherDirectExports);
+        if (pattern.type === "identifier") {
+            directExports.add(pattern.text);
+        } else if (pattern.type === "object_pattern") {
+            for (const child of pattern.children) {
+                if (child.type === "shorthand_property_identifier_pattern") {
+                    directExports.add(child.text);
+                }
+            }
+        } else {
+            return panic(`Unexpected export ${pattern.text} in ${filePath}`);
+        }
+    }
+
     if (kind === "export") {
         debugger;
     }
@@ -223,11 +238,11 @@ function parseImportOrExport(
             case "lexical_declaration":
             case "variable_declaration": {
                 if (gatherDirectExports) {
-                    const variableName =
+                    const nameNode =
                         child.namedChild(0)?.childForFieldName("name") ??
                         undefined;
-                    assert(variableName !== undefined, filePath);
-                    directExports.add(variableName.text);
+                    assert(nameNode !== undefined, filePath);
+                    addExportsFromPattern(nameNode);
                 }
                 break;
             }

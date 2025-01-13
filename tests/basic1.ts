@@ -39,6 +39,8 @@ export function* aGenerator() {
     yield 123;
 }
 
+export const { destructuredExport, anotherDestructuredExport } = something;
+
 export { justAnExport, anotherExport as renamedExport };
 
 import full, { type aType } from "ugh";
