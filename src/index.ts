@@ -11,6 +11,7 @@ import { countImports } from "./count-imports";
 import { removeReExports } from "./remove-re-exports";
 import { readFileAndParseAllImports } from "./parse-imports";
 import { serviceGlide } from "./service-glide";
+import { findUnusedExports } from "./find-unused-exports";
 
 const program = new Command();
 
@@ -144,6 +145,14 @@ program
     .description("Remove re-exports of symbols")
     .action(async (sourceFilePaths) => {
         removeReExports(sourceFilePaths);
+    });
+
+program
+    .command("find-unused-exports")
+    .argument("<repo-path>", "Path to the Glide repository")
+    .description("Naively finds all names that are exported but not imported")
+    .action(async (repoPath) => {
+        findUnusedExports(repoPath);
     });
 
 await program.parseAsync(process.argv);
