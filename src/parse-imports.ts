@@ -343,6 +343,7 @@ export interface AllImports {
     readonly parts: Parts;
     readonly dynamicImportPaths: readonly string[];
     readonly directExports: readonly string[];
+    readonly content: string;
 }
 
 export function readFileAndParseAllImports(filePath: string): AllImports {
@@ -355,6 +356,7 @@ export function readFileAndParseAllImports(filePath: string): AllImports {
         parts,
         dynamicImportPaths: Array.from(importPaths),
         directExports: Array.from(directExports),
+        content,
     };
 }
 
