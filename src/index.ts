@@ -8,6 +8,7 @@ import { dedupImports } from "./dedup-imports";
 import { verbatimImports } from "./verbatim-imports";
 import { resolveImportsInDirectories } from "./resolve-imports";
 import { countImports } from "./count-imports";
+import { countSymbolUses } from "./count-symbol-uses";
 import { removeReExports } from "./remove-re-exports";
 import { readFileAndParseAllImports } from "./parse-imports";
 import { serviceGlide } from "./service-glide";
@@ -134,6 +135,14 @@ program
     .description("Count the number of imports of each symbol")
     .action(async (sourceFilePaths) => {
         countImports(sourceFilePaths);
+    });
+
+program
+    .command("count-symbol-uses")
+    .argument("<repo-path>", "Path to the Glide repository")
+    .description("Count how often each symbol is imported across all files")
+    .action(async (repoPath) => {
+        countSymbolUses(repoPath);
     });
 
 program
